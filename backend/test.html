@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Debate Room</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-from: #0f0c29;
+    --bg-mid: #302b63;
+    --bg-to: #24243e;
+    --glass: rgba(255,255,255,0.07);
+    --glass-border: rgba(255,255,255,0.13);
+    --glass-hover: rgba(255,255,255,0.12);
+    --blur: blur(18px);
+    --text: #f1f5f9;
+    --muted: rgba(241,245,249,0.5);
+    --accent: #818cf8;
+    --accent2: #38bdf8;
+    --radius-pill: 22px;
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --font: 'Inter', system-ui, sans-serif;
+    --shadow: 0 8px 32px rgba(0,0,0,0.35);
+    --shadow-msg: 0 2px 12px rgba(0,0,0,0.25);
+  }
+
+  html, body {
+    height: 100%;
+    font-family: var(--font);
+    background: linear-gradient(135deg, var(--bg-from), var(--bg-mid), var(--bg-to));
+    background-attachment: fixed;
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* Animated blobs */
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 0;
+    animation: blobFloat 12s ease-in-out infinite alternate;
+  }
+  body::before {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #818cf8, #6366f1);
+    top: -120px; left: -120px;
+  }
+  body::after {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, #38bdf8, #0ea5e9);
+    bottom: -100px; right: -100px;
+    animation-delay: 4s;
+  }
+
+  @keyframes blobFloat {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(40px, 30px) scale(1.08); }
+  }
+
+  /* Layout */
+  #app {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    height: 100vh;
+    padding: 16px;
+    gap: 14px;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  #sidebar-header {
+    padding: 18px 16px 12px;
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  #sidebar-header h3 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  #online-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #4ade80;
+    background: rgba(74,222,128,0.12);
+    border: 1px solid rgba(74,222,128,0.25);
+    border-radius: 20px;
+    padding: 3px 10px 3px 6px;
+  }
+
+  #online-badge::before {
+    content: '';
+    display: block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 0 2px rgba(74,222,128,0.3);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.6; transform: scale(0.9); }
+  }
+
+  #users-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  #users-list::-webkit-scrollbar { width: 4px; }
+  #users-list::-webkit-scrollbar-track { background: transparent; }
+  #users-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+  .user-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    transition: background 0.2s;
+    cursor: default;
+  }
+
+  .user-item:hover { background: var(--glass-hover); }
+
+  .user-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+    flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.15);
+    position: relative;
+  }
+
+  .user-avatar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #4ade80;
+    border: 2px solid rgba(15,12,41,0.8);
+  }
+
+  .user-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── MAIN CHAT ── */
+  #chat-panel {
+    flex: 1;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  /* Header */
+  #chat-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.04);
+  }
+
+  #chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #room-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 4px 14px rgba(129,140,248,0.4);
+  }
+
+  #chat-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  #chat-header p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  #header-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 5px 14px;
+  }
+
+  /* Messages */
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 20px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+  }
+
+  #messages::-webkit-scrollbar { width: 5px; }
+  #messages::-webkit-scrollbar-track { background: transparent; }
+  #messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+  /* Date divider */
+  .date-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .date-divider::before, .date-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--glass-border);
+  }
+
+  /* Message rows */
+  .msg-row {
+    display: flex;
+    gap: 10px;
+    max-width: 70%;
+    animation: msgIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275) both;
+  }
+
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .msg-row.mine { align-self: flex-end; flex-direction: row-reverse; }
+  .msg-row.other { align-self: flex-start; }
+
+  .msg-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    flex-shrink: 0;
+    margin-top: auto;
+  }
+
+  .msg-content { display: flex; flex-direction: column; gap: 4px; }
+  .msg-row.mine .msg-content { align-items: flex-end; }
+  .msg-row.other .msg-content { align-items: flex-start; }
+
+  .msg-sender {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0 4px;
+    margin-bottom: 1px;
+  }
+
+  .bubble {
+    padding: 10px 16px;
+    border-radius: var(--radius-pill);
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+    box-shadow: var(--shadow-msg);
+    position: relative;
+  }
+
+  .msg-row.mine .bubble {
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+    color: #fff;
+    border-bottom-right-radius: 6px;
+  }
+
+  .msg-row.other .bubble {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    border-bottom-left-radius: 6px;
+    backdrop-filter: blur(4px);
+  }
+
+  .msg-meta {
+    font-size: 10px;
+    color: var(--muted);
+    padding: 0 4px;
+  }
+
+  /* System messages */
+  .msg-system {
+    align-self: center;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 4px 14px;
+  }
+
+  /* Typing indicator */
+  #typing-area {
+    height: 28px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+  }
+
+  #typing-indicator {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  #typing-indicator.show { display: flex; }
+
+  .typing-dots {
+    display: flex;
+    gap: 3px;
+  }
+
+  .typing-dots span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: dotBounce 1.2s ease-in-out infinite;
+  }
+
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes dotBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+    40%            { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* Input bar */
+  #input-bar {
+    padding: 12px 16px;
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.03);
+  }
+
+  #msg-input-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-pill);
+    padding: 0 14px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  #msg-input-wrap:focus-within {
+    border-color: rgba(129,140,248,0.5);
+    background: rgba(255,255,255,0.1);
+  }
+
+  #msg {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    padding: 11px 0;
+  }
+
+  #msg::placeholder { color: var(--muted); }
+
+  #emoji-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  #emoji-btn:hover { opacity: 1; }
+
+  #send-btn {
+    width: 42px; height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+    color: #fff;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(129,140,248,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+    flex-shrink: 0;
+  }
+
+  #send-btn:hover { transform: scale(1.06); box-shadow: 0 6px 18px rgba(129,140,248,0.55); }
+  #send-btn:active { transform: scale(0.96); }
+
+  #send-btn svg { width: 18px; height: 18px; fill: #fff; }
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h3>Members</h3>
+      <div id="online-badge" id="count">0 online</div>
+    </div>
+    <div id="users-list"></div>
+  </div>
+
+  <!-- MAIN CHAT -->
+  <div id="chat-panel">
+
+    <div id="chat-header">
+      <div id="chat-header-left">
+        <div id="room-icon">💬</div>
+        <div>
+          <h2>Debate Room</h2>
+          <p>Share ideas, argue boldly.</p>
+        </div>
+      </div>
+      <div id="header-pill">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <circle cx="6" cy="6" r="5" stroke="rgba(241,245,249,0.5)" stroke-width="1"/>
+          <path d="M6 3v3l2 2" stroke="rgba(241,245,249,0.5)" stroke-width="1" stroke-linecap="round"/>
+        </svg>
+        <span id="time-display">--:--</span>
+      </div>
+    </div>
+
+    <div id="messages">
+      <div class="date-divider">Today</div>
+    </div>
+
+    <div id="typing-area">
+      <div id="typing-indicator">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+        <span id="typing-text">Someone is typing...</span>
+      </div>
+    </div>
+
+    <div id="input-bar">
+      <div id="msg-input-wrap">
+        <button id="emoji-btn" title="Emoji">😊</button>
+        <input id="msg" placeholder="Type your argument..." autocomplete="off">
+      </div>
+      <button id="send-btn" onclick="sendMsg()" title="Send">
+        <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let ws;
+let myUserId = null;
+let typingTimeout;
+
+const userColors = [
+  { bg: 'linear-gradient(135deg,#818cf8,#6366f1)', text: '#fff', light: 'rgba(129,140,248,0.2)', hex: '#818cf8' },
+  { bg: 'linear-gradient(135deg,#f472b6,#ec4899)', text: '#fff', light: 'rgba(244,114,182,0.2)', hex: '#f472b6' },
+  { bg: 'linear-gradient(135deg,#34d399,#10b981)', text: '#fff', light: 'rgba(52,211,153,0.2)', hex: '#34d399' },
+  { bg: 'linear-gradient(135deg,#fb923c,#f97316)', text: '#fff', light: 'rgba(251,146,60,0.2)', hex: '#fb923c' },
+  { bg: 'linear-gradient(135deg,#38bdf8,#0ea5e9)', text: '#fff', light: 'rgba(56,189,248,0.2)', hex: '#38bdf8' },
+  { bg: 'linear-gradient(135deg,#a78bfa,#8b5cf6)', text: '#fff', light: 'rgba(167,139,250,0.2)', hex: '#a78bfa' },
+];
+
+const userColorMap = {};
+let colorIndex = 0;
+
+function getColor(user) {
+  if (!userColorMap[user]) {
+    userColorMap[user] = userColors[colorIndex % userColors.length];
+    colorIndex++;
+  }
+  return userColorMap[user];
+}
+
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('time-display').textContent =
+    now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function connect() {
+  const token = localStorage.getItem('token');
+  if (!token) { addMsg({ sender: 'system', message: 'No token found — connect manually.' }); return; }
+
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/debate?token=${token}`);
+
+  ws.onopen = () => addMsg({ sender: 'system', message: 'Connected to Debate Room' });
+
+  ws.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if (!myUserId && d.user_id) myUserId = d.user_id;
+    if (d.type === 'typing') { showTyping(d.user); return; }
+    if (d.type === 'users') { updateUsers(d); return; }
+    addMsg(d);
+  };
+
+  ws.onclose = () => addMsg({ sender: 'system', message: 'Disconnected' });
+}
+
+function updateUsers(d) {
+  const badge = document.getElementById('online-badge');
+  badge.textContent = d.count + ' online';
+
+  const list = document.getElementById('users-list');
+  list.innerHTML = '';
+
+  d.users.forEach(u => {
+    const color = getColor(u);
+    const item = document.createElement('div');
+    item.className = 'user-item';
+    item.innerHTML = `
+      <div class="user-avatar" style="background:${color.bg}; color:${color.text}">
+        ${initials(u)}
+      </div>
+      <span class="user-name">${u}</span>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function addMsg(d) {
+  const container = document.getElementById('messages');
+
+  if (d.sender === 'system') {
+    const el = document.createElement('div');
+    el.className = 'msg-system';
+    el.textContent = d.message;
+    container.appendChild(el);
+  } else {
+    const isMine = d.user_id && d.user_id === myUserId;
+    const color = getColor(d.sender || 'Unknown');
+
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + (isMine ? 'mine' : 'other');
+
+    const avatarHtml = `<div class="msg-avatar" style="background:${color.bg}; color:${color.text}">${initials(d.sender || '?')}</div>`;
+
+    const senderHtml = !isMine
+      ? `<div class="msg-sender" style="color:${color.hex}">${d.sender}</div>`
+      : '';
+
+    const timeHtml = d.time
+      ? `<div class="msg-meta">${d.time}</div>`
+      : '';
+
+    row.innerHTML = `
+      ${avatarHtml}
+      <div class="msg-content">
+        ${senderHtml}
+        <div class="bubble">${d.message}</div>
+        ${timeHtml}
+      </div>
+    `;
+
+    container.appendChild(row);
+  }
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendMsg() {
+  const input = document.getElementById('msg');
+  const text = input.value.trim();
+  if (!text) return;
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: 'message', text }));
+  }
+  input.value = '';
+  input.focus();
+}
+
+document.getElementById('msg').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  else if (ws?.readyState === 1) {
+    ws.send(JSON.stringify({ type: 'typing' }));
+  }
+});
+
+function showTyping(user) {
+  const ind = document.getElementById('typing-indicator');
+  document.getElementById('typing-text').textContent = `${user} is typing...`;
+  ind.classList.add('show');
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => ind.classList.remove('show'), 2500);
+}
+
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+# ==============================
+
+# MENTAL HEALTH ASSESSMENT FORM
+
+# ==============================
+
+## SECTION 1: QUESTIONS
+
+---
+
+### Question 1: Current Emotional State
+
+**Prompt:**
+Over the last 2 weeks, how often have you been feeling down, depressed, or hopeless?
+
+**Options:**
+
+1. Not at all (option 1)
+2. Several days (option 2)
+3. More than half the days (option 3)
+4. Nearly every day (option 4)
+
+---
+
+### Question 2: Stress Levels
+
+**Prompt:**
+How would you rate your current stress level when dealing with personal or professional responsibilities?
+
+**Options:**
+
+1. Very Low - I feel completely in control (option 1)
+2. Moderate - Sometimes overwhelmed (option 2)
+3. High - Constantly stressed (option 3)
+4. Severe - Unable to cope (option 4)
+
+---
+
+### Question 3: Physical Well-being
+
+**Prompt:**
+How has your sleep quality been recently?
+
+**Options:**
+
+1. Excellent - Waking up rested (option 1)
+2. Fair - Some trouble falling or staying asleep (option 2)
+3. Poor - Frequently waking up or insomnia (option 3)
+4. Terrible - Not sleeping at all (option 4)
+
+---
+
+### Question 4: Social Support
+
+**Prompt:**
+Do you feel you have a reliable support system you can talk to when things get tough?
+
+**Options:**
+
+1. Yes, fully supported (option 1)
+2. Somewhat, occasionally (option 2)
+3. Rarely (option 3)
+4. No, I feel isolated (option 4)
+
+---
+
+### Question 5: Cognitive Focus
+
+**Prompt:**
+How much difficulty have you had recently in concentrating on tasks, such as reading, working, or making decisions?
+
+**Options:**
+
+1. None at all (option 1)
+2. A little difficulty (option 2)
+3. Moderate difficulty (option 3)
+4. Severe difficulty (option 4)
+
+---
+
+### Question 6: Anxiety Levels
+
+**Prompt:**
+Over the last 2 weeks, how often have you felt dangerously nervous, anxious, or constantly on edge?
+
+**Options:**
+
+1. Not at all (option 1)
+2. Several days (option 2)
+3. More than half the days (option 3)
+4. Nearly every day (option 4)
+
+---
+
+## SECTION 2: STRUCTURE NOTES (AI FRIENDLY)
+
+* Each question is clearly separated
+* Each option is indexed numerically (1–4)
+* Option labels now correctly mapped
+* Prompts are explicitly defined for parsing
+* Consistent formatting for easy tokenization
+
+---
