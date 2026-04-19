@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  --color-bg-from: #0f0c29;
+  --color-bg-mid: #302b63;
+  --color-bg-to: #24243e;
+  
+  --color-glass: rgba(255, 255, 255, 0.07);
+  --color-glass-border: rgba(255, 255, 255, 0.13);
+  --color-glass-hover: rgba(255, 255, 255, 0.12);
+  
+  --color-accent-indigo: #818cf8;
+  --color-accent-sky: #38bdf8;
+  
+  --shadow-debate: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-msg: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+@layer base {
+  body {
+    @apply text-slate-100 font-sans min-h-screen;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    background-attachment: fixed;
+    overflow: hidden;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-glass border border-glass-border backdrop-blur-[18px] shadow-debate;
+  }
+  
+  .glass-item:hover {
+    @apply bg-glass-hover;
+  }
+
+  .blob-float {
+    animation: blobFloat 12s ease-in-out infinite alternate;
+  }
+
+  @keyframes blobFloat {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(40px, 30px) scale(1.08); }
+  }
+
+  .accent-gradient {
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+  }
+  
+  .sky-gradient {
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
