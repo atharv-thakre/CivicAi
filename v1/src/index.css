@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-bg: #F8FAFC;
+  --color-primary: #2563EB;
+  --color-ink: #0F172A;
+  --color-muted: #64748B;
+  --color-border: #E2E8F0;
+  --color-accent: #10B981;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+  }
+}
+
+.huge-title {
+  font-size: clamp(3rem, 10vw, 110px);
+  line-height: 0.85;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+}
+
+.label-caps {
+  @apply text-[12px] font-bold uppercase tracking-[0.05em] text-muted block mb-2;
+}
+
+.input-styled {
+  @apply w-full p-[14px] bg-bg border border-border rounded-xl text-[15px] transition-all focus:outline-none focus:border-primary focus:bg-white;
+}
+
+.btn-primary {
+  @apply w-full bg-primary text-white p-[18px] rounded-xl text-[16px] font-bold flex justify-between items-center transition-opacity hover:opacity-95 active:scale-[0.98];
+}
+
+.card-form {
+  @apply bg-white rounded-[24px] p-6 sm:p-10 border border-border shadow-[0_10px_25px_-5px_rgba(0,0,0,0.05)];
+}
