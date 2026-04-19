@@ -2,7 +2,7 @@ import ollama
 from groq import Groq
 
 
-client = Groq(api_key="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")
+client = Groq(api_key="test")
 
 
 def analyze_basic(text):
