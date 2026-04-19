@@ -1,0 +1,31 @@
+# Ignore node modules in ANY folder (v1, v2, etc.)
+**/node_modules/
+
+# Build outputs
+**/build/
+**/dist/
+
+# Coverage reports
+**/coverage/
+
+# Environment files (in any folder)
+**/.env*
+!**/.env.example
+
+# Logs
+**/*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Python (since you also use backend)
+**/__pycache__/
+**/*.pyc
+
+# Virtual environments
+**/venv/
+**/.venv/
+
+# Misc
+*.sqlite3
