@@ -1,0 +1,13 @@
+{
+  "name": "CivicAlert",
+  "description": "A comprehensive public complaint tracking and civic engagement platform with real-time analytics and interactive map views.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "complaint-filing",
+    "status-tracking",
+    "geospatial-mapping",
+    "trends-analytics"
+  ]
+}
