@@ -1,31 +1,30 @@
-export interface Complaint {
-  id: number;
-  title: string;
-  description: string;
-  tags: string[];
-  severity: 'low' | 'medium' | 'high';
-  location: string;
-  date: string;
-}
-
-export interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  complaintId?: number; // Internal Reference
-}
-
-export interface Member {
-  id: string;
+export interface User {
   name: string;
-  status: 'online' | 'offline';
-  avatar: string;
+  avatarColor: UserColor;
 }
 
-export interface ChatState {
-  activeComplaint: Complaint | null;
-  messages: Message[];
-  isTyping: boolean;
-  members: Member[];
+export interface UserColor {
+  bg: string;
+  text: string;
+  light: string;
+  hex: string;
+}
+
+export interface MessageData {
+  sender?: string;
+  message: string;
+  time?: string;
+  is_mine?: boolean;
+}
+
+export interface WSMessage {
+  type: 'typing' | 'users' | 'message';
+  user?: string;
+  users?: string[];
+  count?: number;
+  sender?: string;
+  message?: string;
+  time?: string;
+  is_mine?: boolean;
+  text?: string;
 }

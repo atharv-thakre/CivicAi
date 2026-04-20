@@ -1,0 +1,23 @@
+{
+  "name": "Debate Room",
+  "short_name": "Debate",
+  "description": "Real-time debate and chat application.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f0c29",
+  "theme_color": "#818cf8",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/debate/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/debate/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
