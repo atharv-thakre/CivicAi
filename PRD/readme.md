@@ -26,8 +26,7 @@
 6. [User Stories & Acceptance Criteria](#6-user-stories--acceptance-criteria)
 7. [Tech Stack & Architecture](#7-tech-stack--architecture)
 8. [Risks & Assumptions](#8-risks--assumptions)
-9. [Out of Scope](#9-out-of-scope)
-10. [Open Questions](#10-open-questions)
+
 ---
  
 ## 1. Overview
