@@ -1,14 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, SectionTitle, Button, MotionCard, Badge } from '@/src/components/ui';
 import { Search, MapPin, Camera, CheckCircle, AlertCircle, ChevronRight, FileText, Plus } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { CATEGORIES } from '@/src/constants';
 
 export default function FileComplaint() {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    language: 'en',
+    lat: '',
+    lng: '',
+    address: '',
+    pincode: '',
+    category: '',
+    customCategory: '',
+    media: null
+  });
   const [step, setStep] = useState('DETERMINATION');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Mock duplicate data
   const duplicates = [
@@ -16,10 +28,64 @@ export default function FileComplaint() {
     { id: '112', title: 'Low voltage issues', location: 'Sector 4', status: 'Resolved' },
   ];
 
+  const handleMediaChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, media: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeMedia = () => {
+    setFormData(prev => ({ ...prev, media: null }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const detectLocation = () => {
+    if (!navigator.geolocation) return;
+    
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const { latitude, longitude } = position.coords;
+      const latStr = latitude.toString();
+      const lngStr = longitude.toString();
+      
+      setFormData(prev => ({ ...prev, lat: latStr, lng: lngStr }));
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+        );
+        const data = await response.json();
+        if (data) {
+          setFormData(prev => ({
+            ...prev,
+            address: data.display_name || '',
+            pincode: data.address?.postcode || ''
+          }));
+        }
+      } catch (error) {
+        console.error("Error detecting address:", error);
+      } finally {
+        setLocationLoading(false);
+      }
+    }, (error) => {
+      console.error("Geolocation error:", error);
+      setLocationLoading(false);
+    });
+  };
+
   const handleNext = () => {
-    if (step === 'DETERMINATION') setStep('FORM');
-    else if (step === 'FORM') {
+    if (step === 'DETERMINATION') {
+      setStep('FORM');
+      detectLocation(); // Auto detect when moving to form
+    } else if (step === 'FORM') {
       setIsSubmitting(true);
+      // Simulate API call with the form data
+      console.log('Submitting Complaint Data:', formData);
       setTimeout(() => {
         setIsSubmitting(false);
         setStep('CONFIRMATION');
@@ -68,12 +134,12 @@ export default function FileComplaint() {
                 type="text"
                 placeholder="Analyze issue... (e.g. Broken pipe)"
                 className="w-full pl-12 pr-4 py-4 glass border-none rounded-2xl focus:ring-1 focus:ring-vision-accent/50 outline-none transition-all text-sm placeholder:text-vision-slate-400 uppercase tracking-tight font-bold"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               />
             </div>
 
-            {searchQuery.length > 2 && (
+            {formData.title.length > 2 && (
               <div className="mt-10 space-y-4 animate-in slide-in-from-top-4 duration-500">
                 <p className="text-[10px] font-bold text-amber-500 flex items-center gap-2 uppercase tracking-[0.2em]">
                   <AlertCircle size={14} className="text-amber-500" />
@@ -120,17 +186,17 @@ export default function FileComplaint() {
                   {CATEGORIES.map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => setSelectedCategory(cat.id)}
+                      onClick={() => setFormData(prev => ({ ...prev, category: cat.id }))}
                       className={cn(
                         "flex flex-col items-center gap-3 p-5 rounded-2xl border transition-all duration-300",
-                        selectedCategory === cat.id
+                        formData.category === cat.id
                           ? "border-vision-accent bg-vision-accent/10 shadow-lg shadow-blue-500/10 scale-[1.05]"
                           : "glass border-black/5 dark:border-white/5 text-vision-slate-400 hover:border-black/10 dark:hover:border-white/10"
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                        selectedCategory === cat.id ? "bg-vision-accent text-white shadow-lg" : "bg-black/5 dark:bg-white/5"
+                        formData.category === cat.id ? "bg-vision-accent text-white shadow-lg" : "bg-black/5 dark:bg-white/5"
                       )}>
                         <Plus size={18} />
                       </div>
@@ -140,36 +206,122 @@ export default function FileComplaint() {
                 </div>
               </div>
 
+              {formData.category === 'others' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label className="text-[10px] font-bold text-vision-slate-400 uppercase tracking-[0.2em] ml-1">Custom Category</label>
+                  <input
+                    type="text"
+                    placeholder="Enter custom category name..."
+                    className="w-full px-5 py-4 glass border-none rounded-2xl focus:ring-1 focus:ring-vision-accent/50 outline-none transition-all text-sm placeholder:text-vision-slate-400 font-medium"
+                    value={formData.customCategory}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customCategory: e.target.value }))}
+                  />
+                </div>
+              )}
+
               <div className="space-y-4">
                 <label className="text-[10px] font-bold text-vision-slate-400 uppercase tracking-[0.2em] ml-1">Observation Log</label>
                 <textarea
                   rows={4}
                   placeholder="Insert detailed description here..."
                   className="w-full px-5 py-4 glass border-none rounded-2xl focus:ring-1 focus:ring-vision-accent/50 outline-none transition-all resize-none text-sm placeholder:text-vision-slate-400 font-medium"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 />
               </div>
 
               <div className="space-y-4">
                 <label className="text-[10px] font-bold text-vision-slate-400 uppercase tracking-[0.2em] ml-1">Visual Evidence</label>
-                <div className="flex gap-4">
-                  <button className="flex flex-col items-center justify-center w-28 h-28 rounded-2xl glass border-black/5 dark:border-white/5 text-vision-slate-400 hover:border-vision-accent/50 hover:text-vision-accent transition-all duration-300 group">
-                    <Camera size={24} className="group-hover:scale-110 transition-transform" />
-                    <span className="text-[8px] mt-2 font-bold uppercase tracking-widest">Add Media</span>
-                  </button>
+                <div className="flex flex-wrap gap-4">
+                  <input 
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleMediaChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  
+                  {!formData.media ? (
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex flex-col items-center justify-center w-28 h-28 rounded-2xl glass border-black/5 dark:border-white/5 text-vision-slate-400 hover:border-vision-accent/50 hover:text-vision-accent transition-all duration-300 group"
+                    >
+                      <Camera size={24} className="group-hover:scale-110 transition-transform" />
+                      <span className="text-[8px] mt-2 font-bold uppercase tracking-widest">Add Media</span>
+                    </button>
+                  ) : (
+                    <div className="relative w-28 h-28 rounded-2xl overflow-hidden border border-vision-accent/30 group">
+                      <img src={formData.media} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        onClick={removeMedia}
+                        className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Plus size={12} className="rotate-45" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="p-5 glass border-black/5 dark:border-white/5 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-vision-accent/10 text-vision-accent rounded-xl border border-vision-accent/10">
-                    <MapPin size={24} />
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-vision-slate-400 uppercase tracking-[0.2em] ml-1">Location Details</label>
+                <div className="space-y-3">
+                  <div className="p-5 glass border-black/5 dark:border-white/5 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="p-3 bg-vision-accent/10 text-vision-accent rounded-xl border border-vision-accent/10">
+                        <MapPin size={24} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h5 className="text-[10px] font-bold uppercase tracking-widest">Address</h5>
+                        <input 
+                          className="bg-transparent border-none outline-none text-[10px] font-bold text-vision-slate-400 uppercase tracking-widest mt-1 w-full"
+                          value={formData.address || (locationLoading ? 'Detecting...' : 'Not detected')}
+                          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                          placeholder="Detected Address"
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={detectLocation}
+                      isLoading={locationLoading}
+                      className="text-vision-accent font-bold text-[10px] uppercase tracking-widest"
+                    >
+                      Detect
+                    </Button>
                   </div>
-                  <div>
-                    <h5 className="text-[10px] font-bold uppercase tracking-widest">Context Location</h5>
-                    <p className="text-[9px] font-bold text-vision-slate-400 uppercase tracking-widest mt-1">Sector 4 Area Detected</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="p-4 glass border-black/5 dark:border-white/5 rounded-2xl">
+                      <h5 className="text-[8px] font-bold text-vision-slate-400 uppercase tracking-widest">Pincode</h5>
+                      <input 
+                        className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest mt-1 w-full"
+                        value={formData.pincode}
+                        onChange={(e) => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
+                        placeholder="Pincode"
+                      />
+                    </div>
+                    <div className="p-4 glass border-black/5 dark:border-white/5 rounded-2xl">
+                      <h5 className="text-[8px] font-bold text-vision-slate-400 uppercase tracking-widest">Latitude</h5>
+                      <input 
+                        className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest mt-1 w-full"
+                        value={formData.lat}
+                        readOnly
+                        placeholder="Lat"
+                      />
+                    </div>
+                    <div className="p-4 glass border-black/5 dark:border-white/5 rounded-2xl">
+                      <h5 className="text-[8px] font-bold text-vision-slate-400 uppercase tracking-widest">Longitude</h5>
+                      <input 
+                        className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest mt-1 w-full"
+                        value={formData.lng}
+                        readOnly
+                        placeholder="Lng"
+                      />
+                    </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="text-vision-accent font-bold text-[10px] uppercase tracking-widest">Verify</Button>
               </div>
             </div>
 

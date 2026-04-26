@@ -11,6 +11,7 @@ import FileComplaint from "./pages/FileComplaint";
 import MyComplaints from "./pages/MyComplaints";
 import MapView from "./pages/MapView";
 import Trends from "./pages/Trends";
+import YourComplaints from "./pages/YourComplaints";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -49,6 +50,7 @@ export default function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/register" element={<FileComplaint />} />
                 <Route path="/complaints" element={<MyComplaints />} />
+                <Route path="/my-complaints" element={<YourComplaints />} />
                 <Route path="/map" element={<MapView />} />
                 <Route path="/trends" element={<Trends />} />
               </Routes>
