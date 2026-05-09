@@ -17,6 +17,3 @@ app.add_middleware(
 
 app.mount("/data", StaticFiles(directory="data"), name="data")
 app.include_router(api_router)
-
-
-

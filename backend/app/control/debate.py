@@ -4,98 +4,129 @@ from app.database.complaints import get_complaint
 import asyncio , ollama , re
 
 
+from datetime import datetime
+from fastapi import WebSocket
+
 class ConnectionManager:
     def __init__(self):
-        self.active: list[dict] = []
+        self.rooms: dict[int, list[dict]] = {}
 
-    async def connect(self, ws: WebSocket, username: str, user_id: int):
+    async def connect(self, ws: WebSocket, username: str, user_id: int, complaint_id: int):
         await ws.accept()
 
-        # prevent duplicate ws
-        self.active = [c for c in self.active if c["ws"] is not ws]
+        if complaint_id not in self.rooms:
+            self.rooms[complaint_id] = []
 
-        self.active.append({
+        # remove duplicate ws if exists
+        self.rooms[complaint_id] = [
+            c for c in self.rooms[complaint_id] if c["ws"] is not ws
+        ]
+
+        self.rooms[complaint_id].append({
             "ws": ws,
             "user": username,
             "user_id": user_id
         })
 
-        await self.broadcast(f"🟢 {username} joined the chat", "system")
+        await self.broadcast(
+            complaint_id,
+            f"🟢 {username} joined the chat",
+            "system"
+        )
 
     def disconnect(self, ws: WebSocket):
-        entry = next((c for c in self.active if c["ws"] is ws), None)
-        if entry:
-            self.active.remove(entry)
-            return entry["user"]
-        return "Unknown"
+        for complaint_id, connections in self.rooms.items():
+            entry = next((c for c in connections if c["ws"] is ws), None)
 
-    async def broadcast(self, message: str, sender: str, user_id: int = None):
+            if entry:
+                connections.remove(entry)
+
+                # cleanup empty room
+                if not connections:
+                    del self.rooms[complaint_id]
+
+                return entry["user"], complaint_id
+
+        return "Unknown", None
+
+    async def broadcast(self, complaint_id: int, message: str, sender: str, user_id: int = None):
         ts = datetime.now().strftime("%H:%M")
-        payload = {
-            "sender": sender,
-            "user_id": user_id,
-            "message": message,
-            "time": ts
-        }
 
-        for conn in self.active[:]:
+        for conn in self.rooms.get(complaint_id, [])[:]:
             try:
-                await conn["ws"].send_json(payload)
-            except Exception:
-                self.active.remove(conn)
+                await conn["ws"].send_json({
+                    "type": "message",
+                    "sender": sender,
+                    "user_id": user_id,
+                    "message": message,
+                    "time": ts,
+                    "is_mine": conn["user_id"] == user_id  # ✅ True only for the sender's connection
+                })
+            except:
+                self.rooms[complaint_id].remove(conn)
 
-    @property
-    def users(self):
-        return [c["user"] for c in self.active]
+    async def broadcast_typing(self, complaint_id: int, ws: WebSocket, username: str):
+        for conn in self.rooms.get(complaint_id, []):
+            if conn["ws"] is not ws:
+                try:
+                    await conn["ws"].send_json({
+                        "type": "typing",
+                        "user": username
+                    })
+                except:
+                    pass
+
+    def get_users(self, complaint_id: int):
+        return [c["user"] for c in self.rooms.get(complaint_id, [])]
 
 
 manager = ConnectionManager()
 
 
 
-async def broadcast_users():
-    participants = manager.users
+async def broadcast_users(complaint_id: int):
+    participants = manager.get_users(complaint_id)
+
     payload = {
-    "type": "users",
-    "count": len(manager.active),
-    "users": ["Civic AI"] + participants
-}
-    for conn in manager.active[:]:
+        "type": "users",
+        "count": len(participants),
+        "users": ["Civic AI"] + participants
+    }
+
+    for conn in manager.rooms.get(complaint_id, [])[:]:
         try:
             await conn["ws"].send_json(payload)
         except:
-            manager.active.remove(conn)
+            manager.rooms[complaint_id].remove(conn)
 
 
+ai_locks: dict[int, bool] = {}
+ai_history: dict[int, list] = {}
 
-# 🔹 Global AI lock
-ai_busy = False
-
-# 🔹 In-memory history (optional)
-ai_history = []
 MAX_HISTORY = 10
 
 
-# =========================
-# 🔥 MAIN HANDLER
-# =========================
-async def handle_ai_response(user_text: str, username: str):
-    global ai_busy
-
-    # 🚫 prevent multiple AI calls
-    if ai_busy:
+async def handle_ai_response(user_text: str, username: str, complaint_id: int):
+    
+    if not complaint_id:
         return
 
-    ai_busy = True
+    # 🔒 per-room lock
+    if ai_locks.get(complaint_id):
+        return
+
+    ai_locks[complaint_id] = True
 
     ai_name = "Civic AI"
     ai_id = -1
 
-    # 🔹 clean trigger text
-    clean_text , complaint_id = parse_ai_input(user_text)
+    # 🔹 clean text (no need to parse complaint anymore)
+    clean_text = parse_ai_input(user_text)
 
     stop_event = asyncio.Event()
-    typing_task = asyncio.create_task(ai_typing_loop(stop_event))
+    typing_task = asyncio.create_task(
+        ai_typing_loop(stop_event, complaint_id)
+    )
 
     try:
         ai_reply = await generate_ai_reply(clean_text, complaint_id)
@@ -105,117 +136,102 @@ async def handle_ai_response(user_text: str, username: str):
         ai_reply = "⚠️ AI failed to respond"
 
     finally:
-        # 🔹 stop typing loop gracefully
         stop_event.set()
         try:
             await typing_task
         except asyncio.CancelledError:
             pass
 
-        # 🔹 release lock
-        ai_busy = False
+        ai_locks[complaint_id] = False
 
-    # 🔹 send AI message
-    await manager.broadcast(ai_reply, ai_name, ai_id)
+    # 🔥 broadcast ONLY to that room
+    await manager.broadcast(complaint_id, ai_reply, ai_name, ai_id)
 
-
-# =========================
-# 💬 TYPING LOOP
-# =========================
-async def ai_typing_loop(stop_event):
+async def ai_typing_loop(stop_event, complaint_id: int):
     while not stop_event.is_set():
-        for conn in manager.active:
+        for conn in manager.rooms.get(complaint_id, []):
             try:
                 await conn["ws"].send_json({
                     "type": "typing",
-                    "user": "AI"
+                    "user": "Civic AI"
                 })
             except:
                 pass
 
         await asyncio.sleep(0.7)
 
+async def generate_ai_reply(text: str, complaint_id: int) -> str:
+    
+    if complaint_id not in ai_history:
+        ai_history[complaint_id] = []
 
-# =========================
-# 🧠 AI RESPONSE
-# =========================
-async def generate_ai_reply(text: str, complaint_id: int = None) -> str:
-    global ai_history
+    history = ai_history[complaint_id]
 
     context = ""
 
-    # 🔹 Fetch complaint safely
-    if complaint_id:
-        complaint = get_complaint(complaint_id)
+    complaint = get_complaint(complaint_id)
 
-        if complaint:
-            context = f"""
+    if complaint:
+        context = f"""
 [Complaint Context]
 Title: {complaint.title}
 Tags: {complaint.tags}
 Description: {complaint.cleaned_text}
 """
-        else:
-            context = "\n[Complaint Context]\nInvalid complaint ID\n"
+    else:
+        context = "[Complaint Context]\nInvalid complaint ID\n"
 
-    # 🔹 System prompt
     system_prompt = f"""
-You are an intelligent debate assistant.
+You are an intelligent civic debate assistant.
 
-Instructions:
-- Use the provided complaint context (if available) to generate accurate, logical, and relevant responses.
-- If complaint context is missing, invalid, or incomplete, clearly mention this in your response.
-- Do NOT assume missing details.
-- Keep responses concise and argumentative when appropriate.
+Rules:
+- Use complaint context STRICTLY
+- Do not hallucinate missing data
+- Be logical, concise, and helpful
+- If context is weak → say it clearly
 
 {context}
 """.strip()
-    
+
     messages = [
-        {"role": "system", "content": system_prompt.strip()},
-        *ai_history,
+        {"role": "system", "content": system_prompt},
+        *history,
         {"role": "user", "content": text}
     ]
 
     reply = await llm_call(messages)
 
-    # 🔹 store history (limit size)
-    ai_history.append({"role": "user", "content": text})
-    ai_history.append({"role": "assistant", "content": reply})
-    ai_history[:] = ai_history[-MAX_HISTORY:]
+    # 🔹 store per-room history
+    history.append({"role": "user", "content": text})
+    history.append({"role": "assistant", "content": reply})
+    ai_history[complaint_id] = history[-MAX_HISTORY:]
 
     return reply
 
-
-# =========================
-# 🤖 LLM CALL (OLLAMA)
-# =========================
 async def llm_call(messages: list) -> str:
     loop = asyncio.get_event_loop()
 
-    response = await loop.run_in_executor(
-        None,
-        lambda: ollama.chat(
-            model="qwen2.5:7b",
-            messages=messages
+    try:
+        response = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: ollama.chat(
+                    model="qwen2.5:7b",
+                    messages=messages
+                )
+            ),
+            timeout=20  # ⏱️ prevent hanging
         )
-    )
 
-    return response["message"]["content"]
+        return response["message"]["content"]
 
+    except asyncio.TimeoutError:
+        return "⚠️ AI timeout — try again"
+
+    except Exception as e:
+        print("LLM ERROR:", e)
+        return "⚠️ AI failed to respond"
 
 def parse_ai_input(user_text: str):
-    complaint_id = None
-
-    # 🔹 extract complaint id (numbers only)
-    match = re.search(r"\?complaint=(\d+)", user_text)
-    if match:
-        complaint_id = int(match.group(1))
-
-    # 🔹 remove @ai and query param cleanly
     clean_text = re.sub(r"@ai", "", user_text, flags=re.IGNORECASE)
-    clean_text = re.sub(r"\?complaint=\d+", "", clean_text)
-
-    clean_text = clean_text.strip()
-
-    return clean_text, complaint_id
+    return clean_text.strip()

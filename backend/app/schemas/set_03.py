@@ -1,21 +1,37 @@
 from datetime import datetime
 from pydantic import BaseModel, Field 
 
-class ComplaintCreate(BaseModel):
-    title: str = Field(..., max_length=200)
-    description: str = Field(
-        ...,
-        min_length=10,
-        max_length=1000,
-        description="Detailed complaint (10–1000 characters)"
-    )
+from fastapi import Form
 
-    language: str = Field(default="en", max_length=30)
-    lat: float = Field(..., ge=-90, le=90)
-    lng: float = Field(..., ge=-180, le=180)
-    address: str  = Field(..., max_length=300)
-    pincode: str = Field(..., min_length=6, max_length=6)
-    category: str | None = None
+class ComplaintCreate(BaseModel):
+    title: str
+    description: str
+    lat: float
+    lng: float
+    address: str
+    pincode: str
+    category: str
+
+    @classmethod
+    def as_form(
+        cls,
+        title: str = Form(...),
+        description: str = Form(...),
+        lat: float = Form(...),
+        lng: float = Form(...),
+        address: str = Form(...),
+        pincode: str = Form(...),
+        category: str = Form(...),
+    ):
+        return cls(
+            title=title,
+            description=description,
+            lat=lat,
+            lng=lng,
+            address=address,
+            pincode=pincode,
+            category=category,
+        )
 
 
 class Coordinates(BaseModel):
@@ -31,7 +47,7 @@ class NearbyComplaintResponse(BaseModel):
     category: str | None = None
     address: str 
     pincode: str 
-    tags : list[str]
+    ai_tags : list[str]
     upvotes: int
     created_at: datetime
     
@@ -44,18 +60,16 @@ class ComplaintResponse(BaseModel):
     title: str
 
     description: str
-    language: str | None = None
     translated_text: str | None = None
-    cleaned_text: str | None = None
 
     category: str | None = None
     ai_department: str | None = None
     ai_confidence: float | None = None
-    ai_severity: int | None = None
+    ai_severity: str | None = None
+    ai_tags : list[str]
 
     is_urgent: bool | None = None
     status: str 
-    assigned_department: str | None = None
     assigned_to: str | None = None
 
     lat: float | None = None
@@ -63,16 +77,10 @@ class ComplaintResponse(BaseModel):
     address: str 
     pincode: str 
 
-    tags : list[str]
-    image_count: int | None = None
+    image_url: str | None = None
 
-    panorama_url: str | None = None
-    image_front_url: str | None = None
-    image_back_url: str | None = None
-    image_right_url: str | None = None
-    image_left_url: str | None = None
     report_url: str | None = None
-    action_plan: str | None = None
+    action_plan: dict | None = None
 
     internal_priority: float | None = None
     upvotes: int

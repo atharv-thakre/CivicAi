@@ -20,7 +20,6 @@ from sqlalchemy.sql import func
 from app.database.db import Base
 
 
-
 class User(Base):
     __tablename__ = "users"
 
@@ -65,7 +64,6 @@ class OTPCode(Base):
     user = relationship("User")
 
 
-
 class Complaint(Base):
     __tablename__ = "complaints"
 
@@ -74,41 +72,32 @@ class Complaint(Base):
 
     title = Column(Text)
     description = Column(Text, nullable=False)
-    language = Column(String, default="en")
-
     translated_text = Column(Text,nullable=True)
-    cleaned_text = Column(Text, nullable=True)
 
     category = Column(String, nullable=True)
+
     ai_department = Column(String, nullable=True)
     ai_confidence = Column(Float, nullable=True)
-
-    ai_severity = Column(Integer, nullable=True)
+    ai_severity = Column(String, nullable=True)
+    ai_tags = Column(JSONB) 
+    
     is_urgent = Column(Boolean, default=False)
-
     status = Column(String, default="draft") # draft , submitted, rejected, approved, assigned, resolved
 
-    assigned_department = Column(String, nullable=True)
     assigned_to = Column(String, nullable=True)
+    action_plan = Column(JSONB , nullable=True)
 
     lat = Column(Float)
     lng = Column(Float)
     address = Column(Text)
     pincode = Column(String(10))
 
-    tags = Column(JSONB)  # store JSON as string OR use JSONB if using Postgres properly
-    panorama_url = Column(Text, nullable=True)
-    image_count = Column(Integer, default=0)
-
-    report_url = Column(Text, nullable=True)
-    action_plan = Column(Text, nullable=True)
-
     internal_priority = Column(Float, default=0)
     upvotes = Column(Integer, default=0)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
 
     # 🔗 Relationships
-    user = relationship("User", back_populates="complaints")   # ✅ FIXED
+    user = relationship("User", back_populates="complaints")
     votes = relationship("ComplaintVote", back_populates="complaint", cascade="all, delete")
     comments = relationship("Comment", back_populates="complaint")
 
@@ -141,4 +130,4 @@ class Comment(Base):
 
     # relationships
     complaint = relationship("Complaint", back_populates="comments")
-    user = relationship("User", back_populates="comments")  # ✅ now valid
+    user = relationship("User", back_populates="comments")

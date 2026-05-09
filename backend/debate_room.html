@@ -609,8 +609,7 @@ function updateUsers(d) {
 function addMsg(d) {
   const container = document.getElementById('messages');
 
-  // ✅ FIX: compare sender name against stored username — reliable and consistent
-  const isMine = d.sender && d.sender === getMyUsername();
+  const isMine = d.is_mine === true;
 
   // system message
   if (d.sender === 'system') {

@@ -10,13 +10,13 @@ import asyncio
 
 router = APIRouter(tags=["debates"])
 
-@router.get("/debates")
-async def home():
-    return FileResponse("test.html")
+@router.get("/debates/{complaint_id}")
+async def debate_page(complaint_id: int):
+    return FileResponse("debate_room.html")
 
-@router.websocket("/ws/debate")
-async def websocket_endpoint(ws: WebSocket):
-    
+@router.websocket("/ws/debate/{complaint_id}")
+async def websocket_endpoint(ws: WebSocket, complaint_id: int):
+
     token = ws.query_params.get("token")
 
     if not token:
@@ -36,23 +36,15 @@ async def websocket_endpoint(ws: WebSocket):
     username = user["name"]
     user_id = user["id"]
 
-    await manager.connect(ws, username , user_id)
-    await broadcast_users()
+    await manager.connect(ws, username, user_id, complaint_id)
+    await broadcast_users(complaint_id)
 
     try:
         while True:
             data = await ws.receive_json()
 
             if data.get("type") == "typing":
-                for conn in manager.active:
-                    if conn["ws"] is not ws:
-                        try:
-                            await conn["ws"].send_json({
-                                "type": "typing",
-                                "user": username
-                            })
-                        except:
-                            pass
+                await manager.broadcast_typing(complaint_id, ws, username)
 
             elif data.get("type") == "message":
                 text = data.get("text", "").strip()
@@ -60,15 +52,23 @@ async def websocket_endpoint(ws: WebSocket):
                 if not text:
                     continue
 
-                if len(text) > 200:  # basic spam protection
+                if len(text) > 200:
                     continue
 
-                await manager.broadcast(text, username , user_id)
+                await manager.broadcast(complaint_id, text, username, user_id)
 
                 if "@ai" in text.lower():
-                    asyncio.create_task(handle_ai_response(text, username))
+                    asyncio.create_task(
+                        handle_ai_response(text, username, complaint_id)
+                    )
 
     except WebSocketDisconnect:
-        user_left = manager.disconnect(ws)
-        await manager.broadcast(f"🔴 {user_left} left the chat", "system")
-        await broadcast_users()
+        user_left, cid = manager.disconnect(ws)
+
+        if cid is not None:
+            await manager.broadcast(
+                cid,
+                f"🔴 {user_left} left the chat",
+                "system"
+            )
+            await broadcast_users(cid)

@@ -1,13 +1,13 @@
 import os 
-from app.database.complaints import create_complaint, is_complete , get_nearby_complaints , get_complaint
-from app.database.models import Complaint
-from app.auth.deps import get_current_user , get_db
+from app.database.complaints import create_complaint, get_nearby_complaints , get_complaint
+from app.auth.deps import get_current_user 
 from app.schemas.set_03 import ComplaintCreate , NearbyComplaintResponse , ComplaintResponse
-from fastapi import APIRouter, HTTPException , UploadFile, File,Form, Depends , Query 
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException , UploadFile, File,Form, Depends , Query , BackgroundTasks
+from app.control.execute import execute
 
 
-UPLOAD_DIR = "/data/complaints"
+UPLOAD_DIR = os.path.abspath("data/complaints")
+UPLOAD_DIR_PATH = "/data/complaints"
 router = APIRouter(prefix="/complaint", tags=["Complaints"])
 
 
@@ -28,20 +28,18 @@ def get_complaint_route(complaint_id: int = Query(...)):
     return ComplaintResponse(
         ref=complaint.ref,
         title=complaint.title,
+
         description=complaint.description,
-
-        language=complaint.language,
         translated_text=complaint.translated_text,
-        cleaned_text=complaint.cleaned_text,
-
         category=complaint.category,
+
         ai_department=complaint.ai_department,
         ai_confidence=complaint.ai_confidence,
         ai_severity=complaint.ai_severity,
+        ai_tags=complaint.ai_tags or [],
 
         is_urgent=complaint.is_urgent,
         status=complaint.status,
-        assigned_department=complaint.assigned_department,
         assigned_to=complaint.assigned_to,
 
         lat=complaint.lat,
@@ -49,31 +47,40 @@ def get_complaint_route(complaint_id: int = Query(...)):
         address=complaint.address,
         pincode=complaint.pincode,
 
-        tags=complaint.tags or [],
-
-        image_count=complaint.image_count,
-
-        panorama_url=complaint.panorama_url,
-
-        # 🚨 NOT IN DB → set manually
-        image_front_url=f"{UPLOAD_DIR}/{complaint_id}/img_front.jpg",
-        image_back_url=f"{UPLOAD_DIR}/{complaint_id}/img_back.jpg", 
-        image_right_url=f"{UPLOAD_DIR}/{complaint_id}/img_right.jpg",
-        image_left_url=f"{UPLOAD_DIR}/{complaint_id}/img_left.jpg",
-
-        report_url=complaint.report_url,
-        action_plan=complaint.action_plan,
+        image_url=f"{UPLOAD_DIR_PATH}/{complaint_id}/img_main.jpg",
+        report_url=f"/report/{complaint_id}",
+        action_plan=complaint.action_plan or {},
 
         internal_priority=complaint.internal_priority,
         upvotes=complaint.upvotes,
-
         created_at=complaint.created_at
     )
 
 
 @router.post("/create")
-def create_complaint_route(complaint: ComplaintCreate , user :dict = Depends(get_current_user)):
+def create_complaint_route(
+    bg : BackgroundTasks,
+    complaint: ComplaintCreate = Depends(ComplaintCreate.as_form),
+    image: UploadFile = File(...),
+    user: dict = Depends(get_current_user)
+):
     db_complaints = create_complaint(complaint, user["id"])
+
+    if image.content_type not in ["image/jpeg", "image/png"]:
+        raise HTTPException(400, "Only JPG/PNG allowed")
+
+    # ALWAYS use join
+    folder_path = os.path.join(UPLOAD_DIR, str(db_complaints.ref))
+    os.makedirs(folder_path, exist_ok=True)
+
+    ext = ".jpg" if image.content_type == "image/jpeg" else ".png"
+    file_path = os.path.join(folder_path, f"img_main{ext}")
+
+    with open(file_path, "wb") as f:
+        while chunk := image.file.read(1024 * 1024):
+            f.write(chunk)
+    
+    bg.add_task(execute, db_complaints.ref)
     return db_complaints
 
 
@@ -82,8 +89,7 @@ def upload_images(
     complaint_id: int = Form(...),
     label: str = Form(...),
     image: UploadFile = File(...),
-    user :dict = Depends(get_current_user),
-    db : Session = Depends(get_db)
+    user :dict = Depends(get_current_user)
 
 ):
     allowed = ["front", "left", "right", "back"]
@@ -102,14 +108,6 @@ def upload_images(
             f.write(chunk)
 
     url_path = file_path.replace("\\", "/")
-
-    if is_complete(complaint_id):
-        db_complaint = db.query(Complaint).filter(Complaint.ref == complaint_id).first()
-        if db_complaint.status == "draft":
-            db_complaint.status = "submitted"
-            db.commit()
-
-            # run_ai_async(complaint_id)
 
     return {
         "message": "Image uploaded",

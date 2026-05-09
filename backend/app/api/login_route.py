@@ -61,6 +61,7 @@ def issue(user_id: int):
         "uid": "b225c874-1379-4ac9-8511-bd2388e42994",
         "role": "admin"
     })
+    print(token)
 
     # 2. Return HTML with a script to save the token
     content = f"""

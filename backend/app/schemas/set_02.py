@@ -1,15 +1,10 @@
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import Optional
 
 
 class AIRequest(BaseModel):
     message: str
-    complaint_id: int
+    complaint_id: Optional[int] = 1
 
-class SentimentRequest(BaseModel):
-    question_1: str
-    question_2: str
-    question_3: str
-    question_4: str
-    question_5: str
-    question_6: str
+class ImproveRequest(BaseModel):
+    message: str
