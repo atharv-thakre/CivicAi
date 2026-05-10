@@ -1,8 +1,0 @@
-{
-  "name": "CivicConnect",
-  "description": "A modern PWA for reporting civic complaints with AI-powered polish and accurate location reporting.",
-  "requestFramePermissions": [
-    "geolocation"
-  ],
-  "majorCapabilities": []
-}
