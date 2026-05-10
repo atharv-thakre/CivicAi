@@ -1,0 +1,92 @@
+{
+  "name": "CivicAlert - Civic Complaint Platform",
+  "short_name": "CivicAlert",
+  "description": "Report and track civic complaints in your community",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#1f2937",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192x192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-384x384-maskable.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["civic", "government", "utilities"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "1280x720",
+      "form_factor": "wide",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-mobile-1.png",
+      "sizes": "540x720",
+      "form_factor": "narrow",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "File Complaint",
+      "short_name": "New Complaint",
+      "description": "File a new civic complaint",
+      "url": "/file-complaint",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "My Complaints",
+      "short_name": "My Complaints",
+      "description": "View your filed complaints",
+      "url": "/my-complaints",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
