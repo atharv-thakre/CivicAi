@@ -1,4 +1,5 @@
-import os
+# blockchain/remote.py
+
 import json
 import base64
 import requests
@@ -11,11 +12,12 @@ headers = {
 }
 
 
-def push_to_github():
+def push():
     with open(RECORD_FILE_PATH, "r") as f:
         content = f.read()
+
     encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
-    # Step 1: Get existing file SHA
+
     url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{REPO_NAME}/contents/records.json"
 
     response = requests.get(url, headers=headers)
@@ -24,7 +26,6 @@ def push_to_github():
     if response.status_code == 200:
         sha = response.json()["sha"]
 
-    # Step 2: Update file
     payload = {
         "message": "Audit blockchain updated",
         "content": encoded_content,
@@ -40,7 +41,11 @@ def push_to_github():
         json=payload
     )
 
-    print(update_response.json())
+    if update_response.status_code in [200, 201]:
+        return update_response.json()["commit"]["sha"]
+
+    return None
+
 
 def get_commit_diff(commit_sha, file_name="records.json"):
 
@@ -62,3 +67,15 @@ def get_commit_diff(commit_sha, file_name="records.json"):
         print("GitHub API Error:", str(e))
         return None
 
+
+def get_records_by_commit(commit_sha):
+    url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{REPO_NAME}/contents/records.json?ref={commit_sha}"
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        encoded_content = response.json()["content"]
+        decoded_content = base64.b64decode(encoded_content).decode("utf-8")
+        return json.loads(decoded_content)
+
+    return None

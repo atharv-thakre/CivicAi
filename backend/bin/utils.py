@@ -71,3 +71,8 @@ def parse_gemini_response(response):
     except Exception as e:
         print("❌ Parse error:", e)
         return None
+    
+
+def save_json(data, filename="data/records_snapshot.json"):
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)

@@ -15,40 +15,84 @@ def load_chain():
         return []
 
     try:
-        with open(FILE_NAME, "r") as f:
+        with open(FILE_NAME, "r", encoding="utf-8") as f:
             return json.load(f)
     except:
         return []
 
 
 def save_chain(chain):
-    with open(FILE_NAME, "w") as f:
+    with open(FILE_NAME, "w", encoding="utf-8") as f:
         json.dump(chain, f, indent=4)
 
 
 def get_previous_hash(chain):
-    if len(chain) == 0:
+    if not chain:
         return "GENESIS_BLOCK"
-
     return chain[-1]["current_hash"]
 
 
-def add_record(action, officer, details):
+def add_record(
+    ref,
+    title,
+    lat,
+    lng,
+    address,
+    pincode,
+    user_id=None,
+    category=None,
+    ai_department=None,
+    ai_confidence=None,
+    ai_severity=None,
+    ai_tags=None,
+    is_urgent=False,
+    status="draft",
+    assigned_to=None,
+    internal_priority=0,
+    upvotes=0
+):
     chain = load_chain()
 
-    timestamp = str(datetime.utcnow())
-
+    created_at = str(datetime.utcnow())
     previous_hash = get_previous_hash(chain)
 
-    block_data = f"{timestamp}{action}{officer}{details}{previous_hash}"
+    block_data = (
+        f"{ref}{user_id}{title}{category}{ai_department}"
+        f"{ai_confidence}{ai_severity}{ai_tags}{is_urgent}"
+        f"{status}{assigned_to}{lat}{lng}{address}"
+        f"{pincode}{internal_priority}{upvotes}"
+        f"{created_at}{previous_hash}"
+    )
 
     current_hash = calculate_hash(block_data)
 
     block = {
-        "timestamp": timestamp,
-        "action": action,
-        "officer": officer,
-        "details": details,
+        "ref": ref,
+        "user_id": user_id,
+        "title": title,
+
+        "category": category,
+
+        "ai_department": ai_department,
+        "ai_confidence": ai_confidence,
+        "ai_severity": ai_severity,
+        "ai_tags": ai_tags or [],
+
+        "is_urgent": is_urgent,
+        "status": status,
+
+        "assigned_to": assigned_to,
+
+        "lat": lat,
+        "lng": lng,
+        "address": address,
+        "pincode": pincode,
+
+        "internal_priority": internal_priority,
+        "upvotes": upvotes,
+
+        "created_at": created_at,
+
         "previous_hash": previous_hash,
         "current_hash": current_hash
     }
@@ -63,44 +107,55 @@ def add_record(action, officer, details):
 def verify_chain():
     chain = load_chain()
 
-    if len(chain) == 0:
+    if not chain:
         print("No blockchain records found")
-        return
+        return False
 
-    for i in range(len(chain)):
-        block = chain[i]
+    for i, block in enumerate(chain):
+        recalculated_data = (
+            f"{block['ref']}{block['user_id']}{block['title']}"
+            f"{block['category']}{block['ai_department']}"
+            f"{block['ai_confidence']}{block['ai_severity']}"
+            f"{block['ai_tags']}{block['is_urgent']}"
+            f"{block['status']}{block['assigned_to']}"
+            f"{block['lat']}{block['lng']}{block['address']}"
+            f"{block['pincode']}{block['internal_priority']}"
+            f"{block['upvotes']}{block['created_at']}"
+            f"{block['previous_hash']}"
+        )
 
-        timestamp = block["timestamp"]
-        action = block["action"]
-        officer = block["officer"]
-        details = block["details"]
-        previous_hash = block["previous_hash"]
-        stored_hash = block["current_hash"]
-
-        # Recreate hash
-        recalculated_data = f"{timestamp}{action}{officer}{details}{previous_hash}"
         recalculated_hash = calculate_hash(recalculated_data)
 
-        # Check 1: Current hash integrity
-        if stored_hash != recalculated_hash:
-            print(f"❌ Hash mismatch detected at Block {i + 1}")
-            print("Possible tampering found")
-            return
+        if block["current_hash"] != recalculated_hash:
+            print(f"❌ Hash mismatch at Block {i + 1}")
+            return False
 
-        # Check 2: Previous hash chain link
         if i > 0:
-            actual_previous_hash = chain[i - 1]["current_hash"]
+            if block["previous_hash"] != chain[i - 1]["current_hash"]:
+                print(f"❌ Broken chain at Block {i + 1}")
+                return False
 
-            if previous_hash != actual_previous_hash:
-                print(f"❌ Broken chain ,possible tampering detected at Block {i + 1}")
-                return
-
-    print("✅ No tampering detected ")
+    print("✅ No tampering detected")
+    return True
 
 
 if __name__ == "__main__":
     add_record(
-        action="Complaint Resolved",
-        officer="Officer_101",
-        details="Pothole issue fixed in Ward 12"
+        ref=1002,
+        user_id=76,
+        title="Pothole issue near MP Nagar",
+        category="Road Maintenance",
+        ai_department="Municipal Corporation",
+        ai_confidence=0.94,
+        ai_severity="High",
+        ai_tags=["road", "pothole", "public safety"],
+        is_urgent=True,
+        status="open",
+        assigned_to="Officer_101",
+        lat=23.2599,
+        lng=77.4126,
+        address="MP Nagar Zone 1, Bhopal",
+        pincode="462011",
+        internal_priority=8.7,
+        upvotes=34
     )

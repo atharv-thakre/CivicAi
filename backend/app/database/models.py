@@ -16,7 +16,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID , JSONB
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from app.database.db import Base
 
 
@@ -38,10 +37,12 @@ class User(Base):
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
     updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # 🔗 ADD THESE
     complaints = relationship("Complaint", back_populates="user")
     comments = relationship("Comment", back_populates="user")
     votes = relationship("ComplaintVote", back_populates="user")
+    officer = relationship("Officer", back_populates="user", uselist=False)
+    otp_codes = relationship("OTPCode", back_populates="user")
+    audits = relationship("Audit", back_populates="user")
 
 
 
@@ -61,31 +62,31 @@ class OTPCode(Base):
     attempt_count = Column(Integer, default=0)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
 
-    user = relationship("User")
+    user = relationship("User", back_populates="otp_codes")
 
 
 class Complaint(Base):
     __tablename__ = "complaints"
 
-    ref = Column(Integer, primary_key=True, autoincrement=True ,index=True)
+    ref = Column(Integer, primary_key=True, autoincrement=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     title = Column(Text)
     description = Column(Text, nullable=False)
-    translated_text = Column(Text,nullable=True)
+    translated_text = Column(Text, nullable=True)
 
     category = Column(String, nullable=True)
 
     ai_department = Column(String, nullable=True)
     ai_confidence = Column(Float, nullable=True)
     ai_severity = Column(String, nullable=True)
-    ai_tags = Column(JSONB) 
-    
-    is_urgent = Column(Boolean, default=False)
-    status = Column(String, default="draft") # draft , submitted, rejected, approved, assigned, resolved
+    ai_tags = Column(JSONB)
 
-    assigned_to = Column(String, nullable=True)
-    action_plan = Column(JSONB , nullable=True)
+    is_urgent = Column(Boolean, default=False)
+    status = Column(String, default="draft")
+
+    assigned_to = Column(Integer, ForeignKey("officers.ref"), nullable=True)
+    action_plan = Column(JSONB, nullable=True)
 
     lat = Column(Float)
     lng = Column(Float)
@@ -96,10 +97,19 @@ class Complaint(Base):
     upvotes = Column(Integer, default=0)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
 
-    # 🔗 Relationships
     user = relationship("User", back_populates="complaints")
-    votes = relationship("ComplaintVote", back_populates="complaint", cascade="all, delete")
-    comments = relationship("Comment", back_populates="complaint")
+    votes = relationship(
+        "ComplaintVote",
+        back_populates="complaint",
+        cascade="all, delete-orphan"
+    )
+    comments = relationship(
+        "Comment",
+        back_populates="complaint",
+        cascade="all, delete-orphan"
+    )
+
+    officer = relationship("Officer", back_populates="complaints")
 
 
 class ComplaintVote(Base):
@@ -117,6 +127,7 @@ class ComplaintVote(Base):
     complaint = relationship("Complaint", back_populates="votes")
     user = relationship("User", back_populates="votes")   # ✅ FIXED
    
+
 class Comment(Base):
     __tablename__ = "comments"
 
@@ -131,3 +142,46 @@ class Comment(Base):
     # relationships
     complaint = relationship("Complaint", back_populates="comments")
     user = relationship("User", back_populates="comments")
+
+
+class Officer(Base):
+    __tablename__ = "officers"
+
+    ref = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    wallet = Column(String, unique=True, nullable=False)
+
+    position = Column(String, nullable=True)
+    department = Column(String, nullable=True)
+    created_at = Column(TIMESTAMP, default=datetime.utcnow)
+    updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    complaints = relationship("Complaint", back_populates="officer")
+    user = relationship("User", back_populates="officer")
+    mainchain_records = relationship("Mainchain", back_populates="officer")
+
+
+class Audit(Base):
+    __tablename__ = "audits"
+
+    ref = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    commit_id = Column(String, unique=True, nullable=False)
+    created_at = Column(TIMESTAMP, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="audits")
+    mainchain_records = relationship("Mainchain", back_populates="audit")
+
+
+class Mainchain(Base):
+    __tablename__ = "mainchain"
+
+    record_id = Column(Integer, primary_key=True, nullable=False)
+    hash_token = Column(String, nullable=False)
+    commit_id = Column(String, ForeignKey("audits.commit_id"), nullable=False)
+    wallet = Column(String, ForeignKey("officers.wallet"), nullable=False)
+    created_at = Column(TIMESTAMP, default=datetime.utcnow)
+
+    audit = relationship("Audit", back_populates="mainchain_records")
+    officer = relationship("Officer", back_populates="mainchain_records")
+    

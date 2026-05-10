@@ -12,9 +12,9 @@ from app.schemas.set_01 import (
 )
 
 from app.auth.deps import get_current_user 
-from app.auth.jwt_handler import create_access_token
-
 from app.database import service as db_service
+from app.auth.jwt_handler import create_access_token
+from fastapi.responses import HTMLResponse
 
 
 
@@ -22,10 +22,7 @@ router = APIRouter(tags=["Profile"])
 
 
 # ============================== SIGNUP ==============================
-from fastapi import APIRouter
-from fastapi.responses import HTMLResponse
 
-router = APIRouter()
 
 @router.get("/issue") # Changed to GET for browser testing
 def issue():
@@ -53,7 +50,7 @@ def issue():
     """
     return HTMLResponse(content=content)
 
-@router.get("/issue/{user_id}") # Changed to GET for browser testing
+@router.get("/issue/{user_id}")
 def issue(user_id: int):
     # 1. Create your token
     token = create_access_token({
@@ -133,6 +130,9 @@ def login(data: LoginRequest):
 
     return {
         "access_token": token,
+        "id": user["id"],
+        "role": user["role"],
+        "uid" : str(user["uid"]),
         "token_type": "bearer"
     }
 
@@ -166,6 +166,8 @@ def send_otp(data: OTPRequest):
             return {"message": "OTP sent successfully"}
         else:
             raise HTTPException(status_code=500, detail="Failed to send OTP")
+        
+
 
 @router.get("/me/otp")
 def get_otp(current_user: dict = Depends(get_current_user)):
@@ -186,130 +188,3 @@ def read_current_user(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
-
-
-
-
-# @router.post("/me/send-otp")
-# def send_otp(current_user: dict = Depends(get_current_user)):
-
-#     if current_user["is_active"]:
-#         raise HTTPException(
-#             status_code=400,
-#             detail="Account already active"
-#         )
-
-#     if not otp_service.can_send_otp(current_user["uid"]):
-#         raise HTTPException(
-#             status_code=429,
-#             detail="Please wait before requesting another OTP"
-#         )
-
-#     otp = otp_service.create_otp()
-
-#     email_sent = email_control.send_email_otp(current_user["email"], otp)
-
-#     if not email_sent:
-#         raise HTTPException(
-#             status_code=500,
-#             detail="Failed to send OTP"
-#         )
-
-#     otp_service.store_otp(current_user["uid"], otp)
-
-#     return {"message": "OTP sent successfully"}
-
-
-# @router.put("/me/activate")
-# def activate_user(
-#     data: CompleteProfileRequest,
-#     current_user: dict = Depends(get_current_user)
-# ):
-
-#     if current_user["is_active"]:
-#         raise HTTPException(
-#             status_code=400,
-#             detail="Account already active"
-#         )
-
-#     if not otp_service.verify_otp(current_user["uid"], data.otp):
-#         raise HTTPException(
-#             status_code=400,
-#             detail="Invalid or expired OTP"
-#         )
-
-#     admin.update_user(current_user["uid"], {
-#         "phone": data.phone,
-#         "is_active": 1
-#     })
-
-#     return {"message": "Profile completed"}
-
-
-# # ============================== FORGOT PASSWORD ==============================
-
-# @router.post("/auth/forgot-password")
-# def forgot_password(data: ForgotPasswordRequest):
-
-#     user = db_service.get_user(email=data.email)
-
-#     if not user:
-#         return {"message": "If account exists, OTP has been sent"}
-
-#     if not otp_service.can_send_otp(user["uid"]):
-#         raise HTTPException(
-#             status_code=429,
-#             detail="Please wait before requesting another OTP"
-#         )
-
-#     otp = otp_service.create_otp()
-
-#     email_sent = email_control.send_email_otp(user["email"], otp)
-
-#     if email_sent:
-#         otp_service.store_otp(user["uid"], otp)
-
-#     return {"message": "If account exists, OTP has been sent"}
-
-
-# @router.post("/auth/reset-password")
-# def reset_password(data: ResetPasswordRequest):
-
-#     user = auth_service.get_user(email=data.email)
-
-#     if not user:
-#         raise HTTPException(status_code=400, detail="Invalid request")
-
-#     valid = otp_service.verify_otp(user["uid"], data.otp)
-
-#     if not valid:
-#         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-
-#     admin.reset_password(user["uid"], data.new_password)
-
-#     return {"message": "Password reset successful"}
-
-# #==============================USER ROUTES===============================
-
-
-# @router.put("/me")
-# def update_profile(
-#     data: UpdateProfileRequest,
-#     current_user: dict = Depends(get_active_user)
-# ):
-#     return user.update_user(
-#         current_user["uid"],
-#         data.dict(exclude_unset=True)
-#     )
-
-
-# @router.put("me/password")
-# def change_my_password(
-#     data: ChangePasswordRequest,
-#     current_user: dict = Depends(get_active_user)
-# ):
-#     return user.change_password(
-#         current_user["uid"],
-#         data.old_password,
-#         data.new_password
-#     )

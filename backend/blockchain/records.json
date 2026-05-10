@@ -1,28 +1,54 @@
 [
     {
-        "timestamp": "2026-04-26 14:59:53.879233",
-        "action": "Complaint Resolved",
-        "officer": "Officer_101",
-        "details": "Pothole issue fixed in Ward 12",
+        "ref": 1001,
+        "user_id": 45,
+        "title": "Pothole issue near MP Nagar",
+        "category": "Road Maintenance",
+        "ai_department": "Municipal Corporation",
+        "ai_confidence": 0.94,
+        "ai_severity": "High",
+        "ai_tags": [
+            "road",
+            "pothole",
+            "public safety"
+        ],
+        "is_urgent": true,
+        "status": "open",
+        "assigned_to": "Officer_101",
+        "lat": 23.2599,
+        "lng": 77.4126,
+        "address": "MP Nagar Zone 1, Bhopal",
+        "pincode": "462011",
+        "internal_priority": 8.7,
+        "upvotes": 34,
+        "created_at": "2026-05-09 14:30:33.759993",
         "previous_hash": "GENESIS_BLOCK",
-        "current_hash": "cc17973dc5ec04609ec2ff22cd2097758e82aa7b5aab52e36f0cb88bfa479340"
+        "current_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107"
     },
     {
-        "timestamp": "2026-04-26 15:00:14.022795",
-        "action": "Complaint Resolved",
-        "officer": "Officer_101",
-        "details": "Pothole issue fixed in Ward 12",
-        "previous_hash": "cc17973dc5ec04609ec2ff22cd2097758e82aa7b5aab52e36f0cb88bfa479340",
-        "current_hash": "a4b8d76e0fec20571a6467e803f2e3e4892f6e087fe90aefb4c95d7e2c5092f5"
-    },
-    {
-        "timestamp": "2026-04-28 12:10:53.754097",
-        "action": "Complaint Resolved",
-        "officer": "Officer_102",
-        "details": "Pothole issue fixed in Ward 12",
-        "previous_hash": "a4b8d76e0fec20571a6467e803f2e3e4892f6e087fe90aefb4c95d7e2c5092f5",
-        "current_hash": "50c4fdffded82174f142563e5a088781f36e7da9a78a299e7648ae508f1e530d"
+        "ref": 1002,
+        "user_id": 76,
+        "title": "Pothole issue near MP Nagar",
+        "category": "Road Maintenance",
+        "ai_department": "Municipal Corporation",
+        "ai_confidence": 0.94,
+        "ai_severity": "High",
+        "ai_tags": [
+            "road",
+            "pothole",
+            "public safety"
+        ],
+        "is_urgent": true,
+        "status": "open",
+        "assigned_to": "Officer_101",
+        "lat": 23.2599,
+        "lng": 77.4126,
+        "address": "MP Nagar Zone 1, Bhopal",
+        "pincode": "462011",
+        "internal_priority": 8.7,
+        "upvotes": 34,
+        "created_at": "2026-05-09 14:32:00.180422",
+        "previous_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107",
+        "current_hash": "35b2f261bf7aa168673143ae4d8320e295746db7f746ad4994ff2ccb1efae63c"
     }
 ]
-
-
