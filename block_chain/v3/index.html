@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Audit Registry</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 40px;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 8px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    button {
+      background: #3b82f6;
+      color: white;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 20px;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>📜 Audit Registry dApp</h1>
+
+  <button onclick="connectWallet()">Connect Wallet</button>
+
+  <h3>Store Record</h3>
+  <input id="data" placeholder="Enter 0x hash (bytes32)" />
+  <input id="commit" placeholder="Enter commit ID" />
+  <br/>
+  <button onclick="store()">Store</button>
+
+  <h3>Get Record</h3>
+  <input id="recordId" placeholder="Record ID" />
+  <button onclick="get()">Fetch</button>
+
+  <h3>Search</h3>
+  <input id="searchCommit" placeholder="Commit ID" />
+  <button onclick="search()">Find</button>
+
+  <div id="status">🔌 Not connected</div>
+
+  <script src="chain.js"></script>
+
+  <script>
+    async function store() {
+      const data = document.getElementById("data").value;
+      const commit = document.getElementById("commit").value;
+      await storeRecord(data, commit);
+    }
+
+    async function get() {
+      const id = document.getElementById("recordId").value;
+      await getRecord(id);
+    }
+
+    async function search() {
+      const commit = document.getElementById("searchCommit").value;
+      await findByCommit(commit);
+    }
+  </script>
+
+</body>
+</html>
