@@ -319,3 +319,68 @@ Possible error responses:
 - `404` with `{"detail":"Complaint not found"}` when the complaint id does not exist or status update fails.
 - `401` when the bearer token is missing or invalid.
 
+## `GET /complaint/officer`
+
+Returns complaints assigned to the authenticated officer.
+
+### Authentication
+
+Required. Send a Bearer token in the `Authorization` header.
+
+### Input schema
+
+No request body or query parameters.
+
+### Fetch example
+
+```js
+const baseDomain = "http://localhost:8000";
+const token = localStorage.getItem("token");
+
+const response = await fetch(`${baseDomain}/complaint/officer`, {
+	method: "GET",
+	headers: { Authorization: `Bearer ${token}` },
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+### Response output
+
+Success response: an array of complaint objects assigned to the authenticated officer.
+
+Example shape matches the `ComplaintResponse` fields (list form).
+
+Possible error responses:
+
+- `401` when the bearer token is missing or invalid.
+
+## `GET /complaint/all`
+
+Returns all complaints in the system (public listing).
+
+### Input schema
+
+No request body or query parameters.
+
+### Fetch example
+
+```js
+const baseDomain = "http://localhost:8000";
+
+const response = await fetch(`${baseDomain}/complaint/all`);
+const data = await response.json();
+console.log(data);
+```
+
+### Response output
+
+Success response: an array of all complaint objects in the system.
+
+Example shape: an array of objects with the same fields as the `ComplaintResponse` (summary or full objects depending on backend implementation).
+
+Possible error responses:
+
+- `500` on server error.
+
