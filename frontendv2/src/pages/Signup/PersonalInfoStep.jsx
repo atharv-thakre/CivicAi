@@ -55,6 +55,30 @@ export default function PersonalInfoStep({ formData, handleChange, errors }) {
       </div>
 
       <div>
+        <label htmlFor="handle" className="block text-sm font-semibold mb-2">
+          Username (Handle)
+        </label>
+        <div className="relative">
+          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-vision-slate-400" />
+          <input
+            type="text"
+            id="handle"
+            name="handle"
+            value={formData.handle}
+            onChange={handleChange}
+            placeholder="johndoe"
+            className={cn(
+              "w-full pl-12 pr-4 py-3 rounded-2xl glass transition-all focus:outline-none focus:ring-2 focus:ring-vision-accent",
+              errors.handle && "ring-2 ring-red-500/50",
+            )}
+          />
+        </div>
+        {errors.handle && (
+          <p className="text-red-500 text-xs mt-1">{errors.handle}</p>
+        )}
+      </div>
+
+      <div>
         <label htmlFor="email" className="block text-sm font-semibold mb-2">
           Email Address
         </label>

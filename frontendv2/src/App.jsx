@@ -13,6 +13,7 @@ import MapView from "./pages/MapView";
 import Trends from "./pages/Trends";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import { AuthProvider } from "./contexts/AuthContext";
 
 export default function App() {
   const [theme, setTheme] = useState(() => {
@@ -34,28 +35,30 @@ export default function App() {
   };
 
   return (
-    <Router>
-      <Routes>
-        {/* Auth Routes (no layout) */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Auth Routes (no layout) */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
-        {/* App Routes (with layout) */}
-        <Route
-          path="*"
-          element={
-            <Layout theme={theme} toggleTheme={toggleTheme}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/register" element={<FileComplaint />} />
-                <Route path="/complaints" element={<MyComplaints />} />
-                <Route path="/map" element={<MapView />} />
-                <Route path="/trends" element={<Trends />} />
-              </Routes>
-            </Layout>
-          }
-        />
-      </Routes>
-    </Router>
+          {/* App Routes (with layout) */}
+          <Route
+            path="*"
+            element={
+              <Layout theme={theme} toggleTheme={toggleTheme}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/register" element={<FileComplaint />} />
+                  <Route path="/complaints" element={<MyComplaints />} />
+                  <Route path="/map" element={<MapView />} />
+                  <Route path="/trends" element={<Trends />} />
+                </Routes>
+              </Layout>
+            }
+          />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }

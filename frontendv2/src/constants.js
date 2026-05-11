@@ -1,3 +1,5 @@
+export const API_BASE_URL = 'http://localhost:8000';
+
 export const CATEGORIES = [
   { id: 'water', name: 'Water Supply', icon: 'Droplets', color: 'blue' },
   { id: 'electricity', name: 'Electricity', icon: 'Zap', color: 'yellow' },

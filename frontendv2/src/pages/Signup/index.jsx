@@ -3,8 +3,10 @@ import { useNavigate, Link } from "react-router-dom";
 import { Shield } from "lucide-react";
 import SignupForm from "./SignupForm";
 import { cn } from "@/src/lib/utils";
+import { useAuth } from "@/src/contexts/AuthContext";
 
 export default function Signup() {
+  const { signup } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +18,7 @@ export default function Signup() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    handle: "",
     email: "",
     phone: "",
     address: "",
@@ -44,6 +47,11 @@ export default function Signup() {
     }
     if (!formData.lastName.trim()) {
       newErrors.lastName = "Last name is required";
+    }
+    if (!formData.handle.trim()) {
+      newErrors.handle = "Username is required";
+    } else if (formData.handle.length < 2 || formData.handle.length > 16) {
+      newErrors.handle = "Username must be between 2 and 16 characters";
     }
     if (!formData.email) {
       newErrors.email = "Email is required";
@@ -115,16 +123,22 @@ export default function Signup() {
     setError("");
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const result = await signup({
+        email: formData.email,
+        password: formData.password,
+        handle: formData.handle,
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        role: "user"
+      });
 
-      // Mock success
-      setSuccess("Account created successfully! Redirecting to login...");
-      localStorage.setItem("userEmail", formData.email);
-
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+      if (result.success) {
+        setSuccess("Account created successfully! Redirecting to login...");
+        setTimeout(() => {
+          navigate("/login");
+        }, 1500);
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
       setError("Signup failed. Please try again.");
     } finally {

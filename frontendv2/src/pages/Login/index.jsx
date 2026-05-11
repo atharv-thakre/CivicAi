@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Shield } from "lucide-react";
 import LoginForm from "./LoginForm";
+import { useAuth } from "@/src/contexts/AuthContext";
 
 export default function Login() {
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -60,17 +62,16 @@ export default function Login() {
     setError("");
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const result = await login(formData.email, formData.password);
 
-      // Mock success
-      setSuccess("Login successful! Redirecting...");
-      localStorage.setItem("userEmail", formData.email);
-      localStorage.setItem("rememberMe", formData.rememberMe);
-
-      setTimeout(() => {
-        navigate("/");
-      }, 1500);
+      if (result.success) {
+        setSuccess("Login successful! Redirecting...");
+        setTimeout(() => {
+          navigate("/");
+        }, 1500);
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
       setError("Login failed. Please check your credentials and try again.");
     } finally {
