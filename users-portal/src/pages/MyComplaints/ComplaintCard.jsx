@@ -10,13 +10,13 @@ export default function ComplaintCard({ complaint, index }) {
           <div className="space-y-4 flex-1 min-w-0">
             <div className="flex items-center gap-4">
               <span className="text-[10px] font-bold text-vision-accent bg-vision-accent/10 px-3 py-1 rounded-lg uppercase tracking-tight border border-vision-accent/20">
-                {complaint.id}
+                #{complaint.ref}
               </span>
               <Badge className={cn(
                 getStatusColor(complaint.status), 
-                "border-none px-3 py-1 bg-opacity-20 font-bold",
-                complaint.status === 'Resolved' ? 'bg-green-500 text-green-600 dark:text-green-400' :
-                complaint.status === 'Under Review' ? 'bg-amber-500 text-amber-600 dark:text-amber-400' :
+                "border-none px-3 py-1 bg-opacity-20 font-bold capitalize",
+                complaint.status.toLowerCase() === 'resolved' ? 'bg-green-500 text-green-600 dark:text-green-400' :
+                complaint.status.toLowerCase() === 'under review' ? 'bg-amber-500 text-amber-600 dark:text-amber-400' :
                 'bg-blue-500 text-blue-600 dark:text-blue-400'
               )}>{complaint.status}</Badge>
             </div>
@@ -33,11 +33,11 @@ export default function ComplaintCard({ complaint, index }) {
           <div className="flex flex-wrap md:flex-col items-center md:items-end gap-6 md:gap-4">
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-vision-slate-400">
               <Calendar size={14} className="text-vision-accent" />
-              {formatDate(complaint.createdAt)}
+              {formatDate(complaint.created_at)}
             </div>
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-vision-slate-400">
               <MapPin size={14} className="text-vision-accent" />
-              {complaint.location}
+              {complaint.address || `${complaint.lat.toFixed(4)}, ${complaint.lng.toFixed(4)}`}
             </div>
           </div>
         </div>
@@ -48,9 +48,9 @@ export default function ComplaintCard({ complaint, index }) {
               <Clock size={16} className="text-vision-accent" />
             </div>
             <div>
-              <p className="text-[8px] font-bold text-slate-400 dark:text-vision-slate-600 uppercase tracking-widest">Update</p>
+              <p className="text-[8px] font-bold text-slate-400 dark:text-vision-slate-600 uppercase tracking-widest">Category</p>
               <p className="text-[10px] font-bold text-vision-slate-400 uppercase tracking-widest">
-                {formatDate(complaint.updatedAt)}
+                {complaint.category}
               </p>
             </div>
           </div>
@@ -63,3 +63,4 @@ export default function ComplaintCard({ complaint, index }) {
     </MotionCard>
   );
 }
+

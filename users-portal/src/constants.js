@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'http://localhost:8000';
+export const API_BASE_URL = 'https://app.totalchaos.online';
 
 export const CATEGORIES = [
   { id: 'water', name: 'Water Supply', icon: 'Droplets', color: 'blue' },

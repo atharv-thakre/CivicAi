@@ -18,7 +18,7 @@ export const Sidebar = ({ theme, toggleTheme }) => {
   const items = [
     { icon: Home, label: "Dashboard", path: "/" },
     { icon: PlusCircle, label: "File Report", path: "/register" },
-    { icon: ListTodo, label: "My Ledger", path: "/complaints" },
+    { icon: ListTodo, label: "My Complaints", path: "/complaints" },
     { icon: MapIcon, label: "Geo View", path: "/map" },
     { icon: TrendingUp, label: "Metrics", path: "/trends" },
   ];
@@ -88,7 +88,7 @@ export const BottomNav = ({ theme, toggleTheme }) => {
   const items = [
     { icon: Home, label: "Home", path: "/" },
     { icon: PlusCircle, label: "File", path: "/register" },
-    { icon: ListTodo, label: "Ledger", path: "/complaints", badge: 2 },
+    { icon: ListTodo, label: "My Complaints", path: "/complaints", badge: 2 },
     { icon: MapIcon, label: "Geo", path: "/map" },
     { icon: TrendingUp, label: "Stats", path: "/trends" },
   ];
