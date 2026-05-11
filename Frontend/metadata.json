@@ -1,0 +1,6 @@
+{
+  "name": "Civic AI Officer Dashboard",
+  "description": "AI-powered citizen grievance classification system with dual-chain blockchain accountability for government officers.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["AI Predictions", "Blockchain Audit", "Real-time Heatmaps"]
+}
