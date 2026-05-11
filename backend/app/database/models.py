@@ -85,7 +85,7 @@ class Complaint(Base):
     is_urgent = Column(Boolean, default=False)
     status = Column(String, default="draft")
 
-    assigned_to = Column(Integer, ForeignKey("officers.ref"), nullable=True)
+    assigned_to = Column(Integer, nullable=True)
     action_plan = Column(JSONB, nullable=True)
 
     lat = Column(Float)
@@ -109,7 +109,6 @@ class Complaint(Base):
         cascade="all, delete-orphan"
     )
 
-    officer = relationship("Officer", back_populates="complaints")
 
 
 class ComplaintVote(Base):
@@ -157,7 +156,7 @@ class Officer(Base):
     updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     complaints = relationship("Complaint", back_populates="officer")
-    user = relationship("User", back_populates="officer")
+    user = relationship("User")
     mainchain_records = relationship("Mainchain", back_populates="officer")
 
 

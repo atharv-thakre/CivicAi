@@ -33,6 +33,24 @@ def get_complaint(complaint_id: int):
         raise HTTPException(404, "Complaint not found")
     return complaint
 
+def get_officer_complaint(assigned_to: int):
+    db = SessionLocal()
+    complaint = db.query(Complaint).filter(Complaint.assigned_to == assigned_to).order_by(Complaint.created_at.desc()).all()
+    db.close()
+    if not complaint:
+        raise HTTPException(404, "Complaint not found")
+    return complaint
+
+def get_all_complaints():
+    db = SessionLocal()
+    complaints = (
+        db.query(Complaint)
+        .order_by(Complaint.created_at.desc())
+        .all()
+    )
+    db.close()
+    return complaints
+
 def get_user_complaints(user_id: int):
     db = SessionLocal()
     complaints = db.query(Complaint).filter(Complaint.user_id == user_id).all()
@@ -157,6 +175,29 @@ def update_complaint_status(complaint_id: int, status: str):
             })
         )
 
+        if result == 0:
+            raise HTTPException(status_code=404, detail="Complaint not found")
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    finally:
+        db.close()
+
+
+def upsert_complaint_allocation(complaint_id: int, assigned_to: int):
+    db = SessionLocal()
+    try:
+        result = (
+            db.query(Complaint)
+            .filter(Complaint.ref == complaint_id)
+            .update({
+                Complaint.assigned_to: assigned_to
+            })
+        )
         if result == 0:
             raise HTTPException(status_code=404, detail="Complaint not found")
 

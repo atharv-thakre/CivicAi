@@ -1,12 +1,12 @@
 import os 
-from bin.utils import to_dict
+from bin.utils import to_dict, to_dict_list
 from blockchain.remote import push
 from blockchain.chain import add_record
 from app.control.execute import execute
 from app.auth.deps import get_current_user 
 from app.schemas.set_03 import ComplaintCreate , NearbyComplaintResponse , ComplaintResponse
 from fastapi import APIRouter, HTTPException , UploadFile, File,Form, Depends , Query , BackgroundTasks
-from app.database.complaints import create_complaint, get_nearby_complaints , get_complaint , update_complaint_status
+from app.database.complaints import create_complaint, get_nearby_complaints , get_complaint , update_complaint_status , get_officer_complaint, get_all_complaints
 
 
 UPLOAD_DIR = os.path.abspath("data/complaints")
@@ -180,3 +180,16 @@ def update_complaint_status_route(
                )
     bg.add_task(push)
     return {"message": f"Complaint : {complaint_id} status updated to {status}"}
+
+
+@router.get("/officer")
+def get_officer_complaint_route(
+    user :dict = Depends(get_current_user)
+):
+    assigned_to = user["id"]
+    return to_dict_list(get_officer_complaint(assigned_to))
+
+@router.get("/all")
+def get_all_complaints_route():
+    return to_dict_list(get_all_complaints())
+
