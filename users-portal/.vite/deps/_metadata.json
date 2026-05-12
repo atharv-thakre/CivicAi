@@ -1,52 +1,70 @@
 {
-  "hash": "c1d1637b",
-  "configHash": "ee5c96e3",
-  "lockfileHash": "2ce1f8b1",
-  "browserHash": "8430c165",
+  "hash": "29b7298a",
+  "configHash": "5c60c61f",
+  "lockfileHash": "6807afdb",
+  "browserHash": "4de0b448",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "1a656c1a",
+      "fileHash": "c88a7267",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "00907a34",
+      "fileHash": "667e805f",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "62b4cf07",
+      "fileHash": "92c45036",
       "needsInterop": false
     },
     "lucide-react": {
       "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
       "file": "lucide-react.js",
-      "fileHash": "8b538ca8",
-      "needsInterop": false
-    },
-    "motion/react": {
-      "src": "../../node_modules/motion/dist/es/react.mjs",
-      "file": "motion_react.js",
-      "fileHash": "56216b81",
+      "fileHash": "363975f7",
       "needsInterop": false
     },
     "recharts": {
       "src": "../../node_modules/recharts/es6/index.js",
       "file": "recharts.js",
-      "fileHash": "cadfc2e5",
+      "fileHash": "78f39f8d",
       "needsInterop": false
+    },
+    "motion/react": {
+      "src": "../../node_modules/motion/dist/es/react.mjs",
+      "file": "motion_react.js",
+      "fileHash": "a972e630",
+      "needsInterop": false
+    },
+    "react-leaflet": {
+      "src": "../../node_modules/react-leaflet/lib/index.js",
+      "file": "react-leaflet.js",
+      "fileHash": "b11e55dc",
+      "needsInterop": false
+    },
+    "leaflet": {
+      "src": "../../node_modules/leaflet/dist/leaflet-src.js",
+      "file": "leaflet.js",
+      "fileHash": "5a307a07",
+      "needsInterop": true
     }
   },
   "chunks": {
-    "chunk-UO3Q43PT": {
-      "file": "chunk-UO3Q43PT.js"
+    "chunk-TLFTKKCI": {
+      "file": "chunk-TLFTKKCI.js"
     },
-    "chunk-6WDWFKQD": {
-      "file": "chunk-6WDWFKQD.js"
+    "chunk-JMLGY4N2": {
+      "file": "chunk-JMLGY4N2.js"
+    },
+    "chunk-NWD2D3PU": {
+      "file": "chunk-NWD2D3PU.js"
+    },
+    "chunk-2TUXWMP5": {
+      "file": "chunk-2TUXWMP5.js"
     }
   }
 }
