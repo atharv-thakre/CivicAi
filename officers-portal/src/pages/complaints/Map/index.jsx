@@ -8,6 +8,7 @@ import {
   useMap
 } from 'react-leaflet';
 import L from 'leaflet';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
@@ -21,7 +22,10 @@ import {
   Zap, 
   Trash2,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Plus,
+  Minus,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,17 +50,58 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-const points = [
-  { id: 1, lat: 28.6139, lng: 77.2090, type: 'Water', priority: 'CRITICAL', sector: 'Sector 4', desc: 'Main pipe burst' },
-  { id: 2, lat: 28.6145, lng: 77.2110, type: 'Roads', priority: 'MEDIUM', sector: 'Sector 4', desc: 'Pothole cluster' },
-  { id: 3, lat: 28.6120, lng: 77.2080, type: 'Electric', priority: 'LOW', sector: 'Sector 4', desc: 'Streetlight out' },
-  { id: 4, lat: 28.6160, lng: 77.2050, type: 'Water', priority: 'CRITICAL', sector: 'Sector 5', desc: 'Sewage overflow' },
-  { id: 5, lat: 28.6100, lng: 77.2150, type: 'Sanitary', priority: 'MEDIUM', sector: 'Sector 7', desc: 'Garbage pileup' },
-];
+
+
+const MapInstanceCapture = ({ setMap }) => {
+  const map = useMap();
+  React.useEffect(() => {
+    if (map) setMap(map);
+  }, [map, setMap]);
+  return null;
+};
 
 const MapViewPage = () => {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('All Departments');
   const [showOptimizer, setShowOptimizer] = useState(true);
+  const [map, setMap] = useState(null);
+  const [points, setPoints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  React.useEffect(() => {
+    const fetchAllComplaints = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('https://app.totalchaos.online/complaint/all');
+        if (!response.ok) throw new Error('Failed to fetch global map data');
+        
+        const data = await response.json();
+        const mappedPoints = data.map(item => ({
+          id: item.ref,
+          lat: item.lat,
+          lng: item.lng,
+          type: item.category,
+          priority: item.is_urgent ? 'CRITICAL' : 
+                   (item.ai_severity === 'high' ? 'CRITICAL' : 
+                    item.ai_severity === 'medium' ? 'MEDIUM' : 'LOW'),
+          sector: item.address || `Sector ${item.pincode}`,
+          desc: item.title,
+          status: item.status
+        }));
+        
+        setPoints(mappedPoints);
+      } catch (err) {
+        setError(err.message);
+        console.error('Map fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllComplaints();
+  }, []);
 
   return (
     <div className="h-[calc(100vh-120px)] relative rounded-xl overflow-hidden border border-border shadow-xl">
@@ -95,13 +140,40 @@ const MapViewPage = () => {
       </div>
 
       {/* Map Content */}
-      <div className="w-full h-full z-0">
+      <div className="w-full h-full z-0 relative">
+        {loading && (
+          <div className="absolute inset-0 z-[2000] bg-background/40 backdrop-blur-[2px] flex items-center justify-center">
+            <div className="ios-glass p-6 rounded-3xl border border-border/50 flex flex-col items-center gap-3 shadow-2xl">
+              <Loader2 className="w-10 h-10 text-primary animate-spin" />
+              <p className="text-sm font-bold tracking-tight text-foreground/80 uppercase">Syncing Geospatial Ledger...</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="absolute inset-0 z-[2000] bg-background/60 backdrop-blur-md flex items-center justify-center p-6 text-center">
+            <div className="ios-glass p-8 rounded-[32px] border border-destructive/20 max-w-sm space-y-4 shadow-2xl">
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center text-destructive mx-auto">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Connection Failed</h3>
+                <p className="text-muted-foreground text-sm mt-1">{error}</p>
+              </div>
+              <Button onClick={() => window.location.reload()} variant="outline" className="w-full rounded-2xl h-12 font-bold border-border/50">
+                Retry Connection
+              </Button>
+            </div>
+          </div>
+        )}
         <MapContainer 
-          center={[28.6139, 77.2090]} 
+          center={[23.2599, 77.4126]} 
           zoom={15} 
           scrollWheelZoom={false}
+          zoomControl={false}
           className="w-full h-full"
         >
+          <MapInstanceCapture setMap={setMap} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -125,7 +197,11 @@ const MapViewPage = () => {
                     <p className="text-[10px] text-muted-foreground italic flex items-center gap-1">
                       <Clock className="w-3 h-3" /> Reported 2h ago
                     </p>
-                    <Button size="sm" className="w-full h-7 text-[10px] bg-civic-cyan text-background font-bold">
+                    <Button 
+                      size="sm" 
+                      className="w-full h-7 text-[10px] bg-civic-cyan text-background font-bold"
+                      onClick={() => navigate(`/plans/${p.id}`)}
+                    >
                       RESOLVE NOW
                     </Button>
                   </div>
@@ -256,7 +332,27 @@ const MapViewPage = () => {
               <Navigation className="w-4 h-4" /> RE-CALCULATE ROUTE
             </Button>
          )}
+         
          <div className="bg-background/80 backdrop-blur-md p-2 rounded-lg border border-border shadow-lg flex flex-col gap-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 hover:bg-secondary transition-colors"
+              onClick={() => map?.zoomIn()}
+              title="Zoom In"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 hover:bg-secondary transition-colors"
+              onClick={() => map?.zoomOut()}
+              title="Zoom Out"
+            >
+              <Minus className="w-4 h-4" />
+            </Button>
+            <Separator className="my-1" />
             <Button variant="ghost" size="icon" className="h-8 w-8"><Settings className="w-4 h-4" /></Button>
             <Button variant="ghost" size="icon" className="h-8 w-8"><Trash2 className="w-4 h-4" /></Button>
          </div>

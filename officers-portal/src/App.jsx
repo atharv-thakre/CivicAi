@@ -2,18 +2,18 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Layout } from './components/Layout';
 import { AppProvider } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
-import Dashboard from './pages/Dashboard';
-import DSSPage from './pages/DSS';
-import ActionPlanDetailPage from './pages/ActionPlanDetail';
-import AuditTrailPage from './pages/AuditTrail';
-import MapViewPage from './pages/MapView';
-import LoginPage from './pages/Login';
-import SignupPage from './pages/Signup';
-import LandingPage from './pages/Landing';
-import RecentComplaintsPage from './pages/RecentComplaints';
-import ProfilePage from './pages/Profile';
-import AlertsPage from './pages/Alerts';
-import SettingsPage from './pages/Settings';
+import Dashboard from './pages/dashboard';
+import DSSPage from './pages/dss';
+import ActionPlanDetailPage from './pages/plans/Detail';
+import AuditTrailPage from './pages/audit';
+import MapViewPage from './pages/complaints/Map';
+import LoginPage from './pages/auth/Login';
+
+import LandingPage from './pages/landing';
+import RecentComplaintsPage from './pages/complaints/RecentComplaints';
+import ProfilePage from './pages/profile';
+import AlertsPage from './pages/alerts';
+import SettingsPage from './pages/settings';
 
 export default function App() {
   return (
@@ -23,7 +23,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
+
             <Route path="/*" element={
               <Layout>
                 <Routes>

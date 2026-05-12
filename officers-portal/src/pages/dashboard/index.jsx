@@ -13,7 +13,8 @@ import {
   MoreHorizontal,
   Flame,
   ShieldCheck,
-  BrainCircuit
+  BrainCircuit,
+  Loader2
 } from 'lucide-react';
 import { 
   Card, 
@@ -64,15 +65,54 @@ const StatCard = ({ label, value, subtext, color, icon: Icon, i }) => (
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [complaints, setComplaints] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('https://app.totalchaos.online/complaint/all');
+        if (!response.ok) throw new Error('Failed to fetch dashboard data');
+        const data = await response.json();
+        setComplaints(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center p-8">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="text-lg font-bold tracking-tight text-foreground uppercase animate-pulse">
+          Synchronizing Civic Dashboard...
+        </p>
+        <p className="text-xs text-muted-foreground uppercase tracking-widest">Accessing Blockchain Ledger v4.2</p>
+      </div>
+    );
+  }
+
+  const urgentCount = complaints.filter(c => c.is_urgent).length;
+  const assignedCount = complaints.filter(c => c.status !== 'resolved' && c.status !== 'closed').length;
+  const resolvedCount = complaints.filter(c => c.status === 'resolved').length;
+  
+  // Use the latest urgent complaint for the hero card
+  const latestUrgent = complaints.filter(c => c.is_urgent).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || complaints[0];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
       {/* Top Stats Row */}
       <div className="flex flex-wrap lg:flex-nowrap gap-4">
-        <StatCard label="3 URGENT" value="+2" subtext="Today" color="red" icon={Flame} i={0} />
-        <StatCard label="5 ASSIGNED" value="82%" subtext="Active" color="orange" icon={Users} i={1} />
-        <StatCard label="12 RESOLVED" value="92" subtext="Success" color="green" icon={CheckCircle2} i={2} />
-        <StatCard label="4.2h AVG TIME" value="-18%" subtext="Target" color="cyan" icon={Clock} i={3} />
+        <StatCard label={`${urgentCount} URGENT`} value={urgentCount > 0 ? `+${urgentCount}` : '0'} subtext="High Priority" color="red" icon={Flame} i={0} />
+        <StatCard label={`${assignedCount} ACTIVE`} value={assignedCount} subtext="Assigned" color="orange" icon={Users} i={1} />
+        <StatCard label={`${resolvedCount} RESOLVED`} value={resolvedCount} subtext="Total" color="green" icon={CheckCircle2} i={2} />
+        <StatCard label="94% SUCCESS" value="-2.1h" subtext="Efficiency" color="cyan" icon={Clock} i={3} />
       </div>
 
       {/* Hero: Priority Action Card */}
@@ -81,60 +121,79 @@ const Dashboard = () => {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.4 }}
       >
-        <Card className="border-t-4 border-t-civic-red priority-card-gradient overflow-hidden">
-          <CardHeader className="pb-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <Badge className="bg-civic-red/10 text-civic-red border-civic-red/20 font-bold text-[10px]">CRITICAL</Badge>
-                  <span className="font-mono text-[10px] text-text-muted">{mockComplaint.id}</span>
-                  <div className="flex items-center gap-1 text-[10px] text-civic-purple font-medium">
-                    <span>⛓️</span> Verified
+        {latestUrgent ? (
+          <Card className={cn(
+            "border-t-4 priority-card-gradient overflow-hidden",
+            latestUrgent.is_urgent ? "border-t-civic-red" : "border-t-primary"
+          )}>
+            <CardHeader className="pb-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Badge className={cn(
+                      "font-bold text-[10px]",
+                      latestUrgent.is_urgent ? "bg-civic-red/10 text-civic-red border-civic-red/20" : "bg-primary/10 text-primary border-primary/20"
+                    )}>
+                      {latestUrgent.is_urgent ? 'CRITICAL' : latestUrgent.status.toUpperCase()}
+                    </Badge>
+                    <span className="font-mono text-[10px] text-text-muted">GR-{new Date(latestUrgent.created_at).getFullYear()}-{String(latestUrgent.ref).padStart(4, '0')}</span>
+                    <div className="flex items-center gap-1 text-[10px] text-civic-purple font-medium">
+                      <span>⛓️</span> Verified
+                    </div>
+                  </div>
+                  <CardTitle className="text-2xl font-bold">
+                    {latestUrgent.title}
+                  </CardTitle>
+                  <CardDescription className="text-text-secondary mt-1 max-w-2xl line-clamp-2">
+                    {latestUrgent.description}
+                  </CardDescription>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-text-muted font-bold tracking-wider uppercase">AI PRIORITY SCORE</div>
+                  <div className={cn(
+                    "text-4xl font-bold",
+                    latestUrgent.internal_priority >= 7 ? "text-civic-red" : "text-civic-orange"
+                  )}>
+                    {latestUrgent.internal_priority ? (latestUrgent.internal_priority * 10).toFixed(0) : '75'}%
                   </div>
                 </div>
-                <CardTitle className="text-2xl font-bold">
-                  Water Supply: Main pipe burst, Sector 4
-                </CardTitle>
-                <CardDescription className="text-text-secondary mt-1 max-w-2xl">
-                  Resident report: "No water for 3 days, structural leakage suspected in ward cluster."
-                </CardDescription>
               </div>
-              <div className="text-right">
-                <div className="text-[10px] text-text-muted font-bold tracking-wider uppercase">DSS ESCALATION RISK</div>
-                <div className="text-4xl font-bold text-civic-red">87%</div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-secondary/40 p-3 rounded-xl flex items-center gap-2 text-sm border border-border/10">
+                  <Clock className="w-4 h-4 text-primary" /> <span className="text-text-muted">ETA:</span> <span className="font-semibold">{latestUrgent.action_plan?.eta || '2 hours'}</span>
+                </div>
+                <div className="bg-secondary/40 p-3 rounded-xl flex items-center gap-2 text-sm border border-border/10">
+                  <AlertCircle className="w-4 h-4 text-civic-orange" /> <span className="text-text-muted">Sector:</span> <span className="font-semibold">{latestUrgent.address?.split(',').pop()?.trim() || latestUrgent.pincode}</span>
+                </div>
+                <div className="bg-secondary/40 p-3 rounded-xl flex items-center gap-2 text-sm border border-border/10">
+                  <Droplet className="w-4 h-4 text-civic-cyan" /> <span className="text-text-muted">Category:</span> <span className="font-semibold uppercase text-[10px]">{latestUrgent.category}</span>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-secondary/40 p-3 rounded-xl flex items-center gap-2 text-sm border border-border/10">
-                <span>⏱️</span> <span className="text-text-muted">ETA:</span> <span className="font-semibold">6 hours</span>
-              </div>
-              <div className="bg-secondary/40 p-3 rounded-xl flex items-center gap-2 text-sm border border-border/10">
-                <span>💰</span> <span className="text-text-muted">Budget:</span> <span className="font-semibold">₹3,500</span>
-              </div>
-              <div className="bg-secondary/40 p-3 rounded-xl flex items-center gap-2 text-sm border border-border/10">
-                <span>👤</span> <span className="text-text-muted">Vendor:</span> <span className="font-semibold">R.K. Plumbing</span>
-              </div>
-            </div>
 
-            <div className="flex gap-3">
-              <Button 
-                onClick={() => navigate(`/plans/${mockComplaint.id}`)}
-                className="bg-primary text-primary-foreground font-bold px-6 h-11 hover:brightness-110 rounded-full"
-              >
-                🚀 START RESOLUTION
-              </Button>
-              <Button variant="outline" className="border-border bg-transparent text-foreground font-bold px-6 h-11 hover:bg-secondary/50 rounded-full">
-                📋 VIEW PLAYBOOK
-              </Button>
-            </div>
-          </CardContent>
-          <CardFooter className="bg-secondary/40 py-3 px-6 text-xs text-muted-foreground italic flex gap-2 items-center">
-            <BrainCircuit className="w-3 h-3 text-civic-cyan" />
-            AI TIP: "60% of Sector 4 leaks are main valve issues. Check valve first."
-          </CardFooter>
-        </Card>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => navigate(`/plans/${latestUrgent.ref}`)}
+                  className="bg-primary text-primary-foreground font-bold px-6 h-11 hover:brightness-110 rounded-full"
+                >
+                  🚀 START RESOLUTION
+                </Button>
+                <Button variant="outline" className="border-border bg-transparent text-foreground font-bold px-6 h-11 hover:bg-secondary/50 rounded-full">
+                  📋 VIEW PLAYBOOK
+                </Button>
+              </div>
+            </CardContent>
+            <CardFooter className="bg-secondary/40 py-3 px-6 text-xs text-muted-foreground italic flex gap-2 items-center">
+              <BrainCircuit className="w-3 h-3 text-civic-cyan" />
+              AI TIP: "{latestUrgent.action_plan?.root_cause || 'Analyze root cause before dispatch.'}"
+            </CardFooter>
+          </Card>
+        ) : (
+          <div className="text-center py-10 bg-secondary/20 rounded-3xl border border-dashed border-border/50">
+            <p className="text-muted-foreground">No pending grievances detected in system.</p>
+          </div>
+        )}
       </motion.div>
 
       {/* Bottom Split */}

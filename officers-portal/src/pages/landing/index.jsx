@@ -36,7 +36,7 @@ const LandingPage = () => {
       textColor: "#fff",
       links: [
         { label: "Company", href: "/login" },
-        { label: "Protocol", href: "/signup" },
+        { label: "Protocol", href: "/login" },
         { label: "Security", href: "/login" }
       ]
     }
@@ -75,7 +75,7 @@ const LandingPage = () => {
             </p>
             <div className="flex flex-wrap gap-4 pt-4">
               <Button 
-                onClick={() => navigate('/signup')}
+                onClick={() => navigate('/login')}
                 className="h-16 px-10 bg-primary text-white text-lg font-bold rounded-[22px] shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex gap-3"
               >
                 Launch Portal <ArrowRight className="w-6 h-6" />
