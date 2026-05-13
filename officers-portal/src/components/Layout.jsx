@@ -196,7 +196,7 @@ export const Layout = ({ children }) => {
 
       {/* Main Content Area */}
       <div className={cn(
-        "flex-grow flex flex-col min-h-screen transition-all duration-300",
+        "flex-grow flex flex-col h-screen transition-all duration-300",
         collapsed ? "pl-[72px]" : "pl-[240px]"
       )}>
         {/* Top Bar */}
@@ -266,7 +266,7 @@ export const Layout = ({ children }) => {
         </header>
 
         {/* Dynamic Content */}
-        <ScrollArea className="flex-grow">
+        <ScrollArea className="flex-grow min-h-0">
           <main className="p-6 pb-20">
             {children}
           </main>
