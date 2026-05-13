@@ -36,6 +36,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { mockComplaint, mockExpertise } from '@/mockData';
 import { cn } from '@/lib/utils';
+import { useApp } from '@/context/AppContext';
 
 // Helper for Stat Card
 const StatCard = ({ label, value, subtext, color, icon: Icon, i }) => (
@@ -65,6 +66,7 @@ const StatCard = ({ label, value, subtext, color, icon: Icon, i }) => (
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { state, dispatch } = useApp();
   const [complaints, setComplaints] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
@@ -77,6 +79,7 @@ const Dashboard = () => {
         if (!response.ok) throw new Error('Failed to fetch dashboard data');
         const data = await response.json();
         setComplaints(data);
+        dispatch({ type: 'SET_COMPLAINTS', payload: data });
       } catch (err) {
         setError(err.message);
       } finally {

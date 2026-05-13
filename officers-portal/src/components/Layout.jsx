@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion, AnimatePresence } from 'motion/react';
+import NotificationReminder from './NotificationReminder';
 
 const SidebarItem = ({ to, icon: Icon, label, badge, collapsed, children }) => {
   const location = useLocation();
@@ -130,6 +131,7 @@ export const Layout = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden transition-colors duration-500">
+      <NotificationReminder />
       {/* Sidebar */}
       <motion.aside
         initial={false}
