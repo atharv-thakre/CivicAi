@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useApp } from '@/context/AppContext';
 
 
 
@@ -57,6 +58,7 @@ const RecentComplaintsPage = ({ defaultFilter }) => {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { dispatch } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -92,6 +94,7 @@ const RecentComplaintsPage = ({ defaultFilter }) => {
         }));
         
         setComplaints(mappedData);
+        dispatch({ type: 'SET_COMPLAINTS', payload: data });
       } catch (err) {
         setError(err.message);
         console.error('Fetch error:', err);

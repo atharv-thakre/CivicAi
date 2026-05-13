@@ -19,7 +19,8 @@ import {
   Link2,
   RefreshCw,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Users
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -45,11 +46,23 @@ const AuditTrailPage = () => {
     setLoading(true);
     setError(null);
     try {
+      // 1. Fetch the overall chain integrity status
+      const verifyRes = await fetch('https://app.totalchaos.online/chain/verify');
+      if (verifyRes.ok) {
+        const verifyData = await verifyRes.json();
+        setChainValid(verifyData.status);
+      }
+
+      // 2. Fetch the actual blockchain audit records
       const response = await fetch('https://app.totalchaos.online/chain/audits');
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const data = await response.json();
-      setAudits(data);
-      if (data.length > 0) setSelectedBlock(data[0].ref);
+      
+      // Ensure data is sorted by ref
+      const sortedData = [...data].sort((a, b) => (a.ref || 0) - (b.ref || 0));
+      setAudits(sortedData);
+      
+      if (sortedData.length > 0) setSelectedBlock(sortedData[0].ref);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -61,7 +74,8 @@ const AuditTrailPage = () => {
     String(a.ref).includes(searchQuery) ||
     a.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    a.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    String(a.user_id).includes(searchQuery)
   );
 
   const selected = audits.find(a => a.ref === selectedBlock);
@@ -75,14 +89,7 @@ const AuditTrailPage = () => {
     }
   };
 
-  const isChainValid = (items) => {
-    for (let i = 1; i < items.length; i++) {
-      if (items[i].previous_hash !== items[i - 1].current_hash) return false;
-    }
-    return true;
-  };
-
-  const chainValid = audits.length > 0 && isChainValid(audits);
+  const [chainValid, setChainValid] = useState(true);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12 animate-in fade-in duration-700">
@@ -140,101 +147,99 @@ const AuditTrailPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
 
-            {/* Chain integrity banner */}
-            <Card className={cn(
-              'overflow-hidden rounded-3xl shadow-sm relative',
-              chainValid ? 'border-civic-green/20 bg-civic-green/5' : 'border-red-500/20 bg-red-500/5'
-            )}>
-              <div className={cn(
-                'absolute top-0 left-0 w-full h-[2px] shadow-[0_0_10px_currentColor] opacity-50 animate-[scan_3s_linear_infinite]',
-                chainValid ? 'bg-civic-green' : 'bg-red-400'
-              )} />
-              <style>{`
-                @keyframes scan {
-                  0% { transform: translateY(0); opacity: 0; }
-                  10% { opacity: 1; }
-                  90% { opacity: 1; }
-                  100% { transform: translateY(160px); opacity: 0; }
-                }
-              `}</style>
-              <CardContent className="p-8 flex flex-col md:flex-row items-center gap-8 justify-between">
-                <div className="flex items-center gap-6">
-                  <div className={cn(
-                    'w-20 h-20 rounded-full border-4 flex items-center justify-center relative',
-                    chainValid ? 'border-civic-green/20' : 'border-red-400/20'
-                  )}>
-                    <ShieldCheck className={cn('w-10 h-10', chainValid ? 'text-civic-green' : 'text-red-400')} />
-                    <div className={cn(
-                      'absolute inset-0 rounded-full border-4 border-t-transparent animate-spin',
-                      chainValid ? 'border-civic-green' : 'border-red-400'
-                    )} style={{ animationDuration: '2s' }} />
+            {/* Block chain visualisation */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                  Node Chain ({filteredAudits.length} record{filteredAudits.length !== 1 ? 's' : ''}):
+                </h3>
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-civic-green">
+                    <div className="w-2 h-2 rounded-full bg-current" /> Verified
                   </div>
-                  <div className="space-y-1">
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
-                      INTEGRITY:{' '}
-                      <span className={chainValid ? 'text-civic-green' : 'text-red-400'}>
-                        {chainValid ? 'VALID' : 'BROKEN'}
-                      </span>
-                    </h2>
-                    <div className="flex gap-4 text-xs font-mono text-muted-foreground uppercase tracking-tight">
-                      <span>LENGTH: {audits.length} BLOCKS</span>
-                      <span className="text-border">|</span>
-                      <span>VERIFIED: JUST NOW</span>
-                    </div>
+                  <div className="flex items-center gap-1.5 text-red-500">
+                    <div className="w-2 h-2 rounded-full bg-current" /> Tampered
                   </div>
                 </div>
-                {audits.length > 0 && (
-                  <div className="ios-glass p-4 rounded-2xl border border-border/50 font-mono text-xs space-y-2">
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">LATEST HASH:</span>
-                      <span className="text-primary">{HASH_SHORT(audits[audits.length - 1].current_hash)}</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">TOTAL BLOCKS:</span>
-                      <span className="text-foreground">{audits.length}</span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-y-8 gap-x-0">
+                {filteredAudits.map((audit, i) => {
+                  // Check if this block is valid relative to the previous one in the FULL audits array
+                  // We need to find the actual index in the original audits array to check integrity
+                  const originalIndex = audits.findIndex(a => a.ref === audit.ref);
+                  const isBlockValid = originalIndex === 0 || 
+                    audits[originalIndex].previous_hash === audits[originalIndex - 1].current_hash;
 
-            {/* Block chain visualisation */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-                Node Chain ({filteredAudits.length} record{filteredAudits.length !== 1 ? 's' : ''}):
-              </h3>
-              <div className="flex flex-wrap items-center gap-0">
-                {filteredAudits.map((audit, i) => (
-                  <React.Fragment key={audit.ref}>
-                    <motion.div
-                      whileHover={{ scale: 1.03 }}
-                      onClick={() => setSelectedBlock(audit.ref)}
-                      className={cn(
-                        'w-36 h-28 rounded-2xl border flex flex-col items-center justify-center gap-2 cursor-pointer transition-all relative overflow-hidden',
-                        selectedBlock === audit.ref
-                          ? 'bg-primary/5 border-primary shadow-sm'
-                          : 'bg-card border-border opacity-70 hover:opacity-100'
+                  return (
+                    <React.Fragment key={audit.ref}>
+                      <motion.div
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setSelectedBlock(audit.ref)}
+                        className={cn(
+                          'w-40 h-32 rounded-2xl border-2 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all relative overflow-hidden',
+                          selectedBlock === audit.ref
+                            ? 'bg-primary/5 border-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]'
+                            : 'bg-card border-border/50 hover:border-border hover:bg-secondary/20',
+                          !isBlockValid && 'border-red-500/50 bg-red-500/5 shadow-[0_0_10px_rgba(239,68,68,0.1)]'
+                        )}
+                      >
+                        <div className="absolute top-0 right-0 p-2">
+                          {isBlockValid ? (
+                            <CheckCircle2 className="w-4 h-4 text-civic-green" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
+                          )}
+                        </div>
+                        
+                        {!isBlockValid && (
+                          <div className="absolute top-0 left-0 w-full h-1 bg-red-500/30" />
+                        )}
+
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-[10px] font-black text-muted-foreground uppercase opacity-40">Block {audit.ref}</span>
+                          <Badge variant="outline" className={cn(
+                            'text-[9px] py-0 px-2 rounded-full font-bold',
+                            selectedBlock === audit.ref ? 'bg-primary text-primary-foreground border-transparent' : 'border-border'
+                          )}>
+                            {audit.category || 'EVENT'}
+                          </Badge>
+                        </div>
+                        
+                        <div className="mt-1 flex flex-col items-center">
+                          <span className="text-[10px] font-mono font-medium text-foreground/60">{HASH_SHORT(audit.current_hash)}</span>
+                          <div className="flex items-center gap-1 mt-1">
+                             <div className={cn("w-1.5 h-1.5 rounded-full", isBlockValid ? "bg-civic-green" : "bg-red-500")} />
+                             <span className={cn("text-[8px] font-bold uppercase", isBlockValid ? "text-civic-green" : "text-red-500")}>
+                               {isBlockValid ? "Signed" : "Corrupted"}
+                             </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                      
+                      {i < filteredAudits.length - 1 && (
+                        <div className="flex flex-col items-center px-1">
+                          <div className={cn(
+                            "w-8 h-[2px]",
+                            // The next block's validity depends on the link between this one and the next
+                            (audits[audits.findIndex(a => a.ref === filteredAudits[i+1].ref)].previous_hash === audit.current_hash)
+                              ? "bg-civic-green/30" 
+                              : "bg-red-500/50 animate-pulse h-[3px]"
+                          )} />
+                          {!(audits[audits.findIndex(a => a.ref === filteredAudits[i+1].ref)].previous_hash === audit.current_hash) && (
+                             <Lock className="w-3 h-3 text-red-500 mt-1" />
+                          )}
+                        </div>
                       )}
-                    >
-                      <div className="absolute top-0 right-0 p-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-civic-green" />
-                      </div>
-                      <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Block #{audit.ref}</span>
-                      <Badge variant="outline" className={cn(
-                        'text-[9px] py-0 px-2 rounded-full max-w-[110px] truncate',
-                        selectedBlock === audit.ref ? 'border-primary text-primary' : 'border-border text-muted-foreground'
-                      )}>
-                        {audit.category || 'Unknown'}
-                      </Badge>
-                      <span className="text-[9px] font-mono text-foreground/40">{HASH_SHORT(audit.current_hash)}</span>
-                    </motion.div>
-                    {i < filteredAudits.length - 1 && (
-                      <div className="flex-grow min-w-[16px] h-[1px] bg-border mx-0.5 shrink" />
-                    )}
-                  </React.Fragment>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
                 {filteredAudits.length === 0 && (
-                  <p className="text-muted-foreground text-sm py-8 w-full text-center">No blocks match your search.</p>
+                  <div className="w-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-border/50 rounded-[40px] bg-secondary/10">
+                    <Database className="w-12 h-12 text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground text-sm font-medium">No blocks match your current filter.</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -261,51 +266,98 @@ const AuditTrailPage = () => {
                       </div>
                     </CardHeader>
                     <CardContent className="p-8 space-y-8">
-                      {/* Complaint info */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-3">
-                            <Tag className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Category</p>
-                              <p>{selected.category || '—'}</p>
+                      {/* Detailed Complaint Info */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                          <div>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Primary Details</p>
+                            <div className="space-y-3">
+                              <div className="flex items-start gap-3">
+                                <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <p className="text-xs font-bold">User ID: {selected.user_id}</p>
+                                  <p className="text-[10px] text-muted-foreground">Assigned to: {selected.assigned_to}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <Tag className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <p className="text-xs font-bold">{selected.category}</p>
+                                  <p className="text-[10px] text-muted-foreground">{selected.ai_department}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <p className="text-xs font-bold leading-tight">{selected.address}</p>
+                                  <p className="text-[10px] text-muted-foreground">Pincode: {selected.pincode}</p>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          <div className="flex items-start gap-3">
-                            <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Address</p>
-                              <p>{selected.address} — {selected.pincode}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Clock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Created At</p>
-                              <p className="font-mono">{selected.created_at}</p>
+
+                          <div>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">AI Verification</p>
+                            <div className="bg-secondary/20 p-3 rounded-2xl border border-border/50 space-y-3">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Confidence</span>
+                                <span className="font-mono font-bold text-civic-green">{(selected.ai_confidence * 100).toFixed(0)}%</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Severity</span>
+                                <Badge variant="outline" className={cn(
+                                  "text-[9px] font-bold py-0 h-4",
+                                  selected.ai_severity === 'High' ? "border-red-500 text-red-500" : "border-amber-500 text-amber-500"
+                                )}>
+                                  {selected.ai_severity}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {selected.ai_tags?.map(tag => (
+                                  <Badge key={tag} className="text-[8px] bg-civic-purple/10 text-civic-purple border-civic-purple/20 py-0 h-4">
+                                    #{tag}
+                                  </Badge>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Status</span>
-                            <Badge className={cn('border', getStatusColor(selected.status))}>
-                              {selected.status || 'draft'}
-                            </Badge>
+
+                        <div className="space-y-6">
+                          <div>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">System Metrics</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-background/40 p-3 rounded-2xl border border-border/50 text-center">
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase">Priority</p>
+                                <p className="text-xl font-black text-civic-cyan">{selected.internal_priority}</p>
+                              </div>
+                              <div className="bg-background/40 p-3 rounded-2xl border border-border/50 text-center">
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase">Upvotes</p>
+                                <p className="text-xl font-black text-civic-purple">{selected.upvotes}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Is Urgent</span>
-                            <span className={selected.is_urgent ? 'text-red-400 font-bold' : 'text-muted-foreground'}>
-                              {selected.is_urgent ? 'YES' : 'No'}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Upvotes</span>
-                            <span className="font-mono">{selected.upvotes}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Priority Score</span>
-                            <span className="font-mono">{selected.internal_priority?.toFixed(2)}</span>
+
+                          <div>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Block Meta</p>
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Status</span>
+                                <Badge className={cn("font-bold capitalize", getStatusColor(selected.status))}>
+                                  {selected.status}
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Urgency</span>
+                                <span className={cn("font-bold", selected.is_urgent ? "text-red-500" : "text-muted-foreground")}>
+                                  {selected.is_urgent ? "CRITICAL" : "NORMAL"}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Logged At</span>
+                                <span className="font-mono text-foreground/70 text-[10px]">{selected.created_at}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -352,49 +404,71 @@ const AuditTrailPage = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <Card className="bg-gradient-to-br from-civic-purple/10 to-transparent rounded-3xl">
-              <CardHeader>
-                <CardTitle className="text-sm uppercase tracking-widest text-civic-purple font-bold">
-                  Blockchain Specs
+            <Card className={cn(
+              'overflow-hidden rounded-3xl shadow-sm relative border-2',
+              chainValid ? 'border-civic-green/20 bg-civic-green/5' : 'border-red-500/20 bg-red-500/5'
+            )}>
+              <div className={cn(
+                'absolute top-0 left-0 w-full h-[2px] opacity-30 animate-[scan_3s_linear_infinite]',
+                chainValid ? 'bg-civic-green' : 'bg-red-400'
+              )} />
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-black">
+                  Chain Status
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Database className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Network</span>
+                <div className="flex flex-col items-center text-center gap-4 py-2">
+                  <div className={cn(
+                    'w-24 h-24 rounded-full border-4 flex items-center justify-center relative bg-background/50 backdrop-blur-sm',
+                    chainValid ? 'border-civic-green/20' : 'border-red-400/20'
+                  )}>
+                    <ShieldCheck className={cn('w-12 h-12', chainValid ? 'text-civic-green' : 'text-red-400')} />
+                    <div className={cn(
+                      'absolute inset-[-4px] rounded-full border-4 border-t-transparent animate-spin',
+                      chainValid ? 'border-civic-green' : 'border-red-400'
+                    )} style={{ animationDuration: '3s' }} />
                   </div>
-                  <Badge variant="secondary">CIVIC-CORE-3</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Cpu className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Consensus</span>
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-black tracking-tighter">
+                      {chainValid ? 'SECURED' : 'COMPROMISED'}
+                    </h2>
+                    <Badge className={cn(
+                      "font-bold uppercase tracking-widest text-[9px]",
+                      chainValid ? "bg-civic-green/10 text-civic-green border-civic-green/20" : "bg-red-500/10 text-red-500 border-red-500/20"
+                    )}>
+                      {chainValid ? 'Integrity Verified' : 'Hash Mismatch'}
+                    </Badge>
                   </div>
-                  <span className="text-xs font-mono">PoA (Authority)</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Lock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Encryption</span>
+
+                <Separator className="opacity-50" />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase">Nodes</p>
+                    <p className="text-xl font-black font-mono">{audits.length}</p>
                   </div>
-                  <span className="text-xs font-mono text-civic-cyan">AES-256-GCM</span>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase">Network</p>
+                    <p className="text-xs font-bold text-civic-purple">CIVIC-3</p>
+                  </div>
                 </div>
-                <Separator />
-                <div className="space-y-2">
-                  <h4 className="text-[10px] font-bold text-muted-foreground uppercase">Total Blocks</h4>
-                  <p className="text-3xl font-extrabold tabular-nums">{audits.length}</p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-[10px] font-bold text-muted-foreground uppercase">Chain Integrity</h4>
-                  <p className={cn('text-sm font-bold', chainValid ? 'text-civic-green' : 'text-red-400')}>
-                    {chainValid ? '✓ All hashes verified' : '✗ Chain mismatch detected'}
-                  </p>
-                </div>
+
+                {audits.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-background/40 border border-border/50 font-mono text-[10px] space-y-3">
+                    <div className="space-y-1">
+                      <span className="text-muted-foreground block uppercase font-bold text-[8px]">Latest Head Hash:</span>
+                      <span className="text-primary break-all leading-tight block">
+                        {audits[audits.length - 1].current_hash}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
-              <CardFooter>
-                <Button className="w-full bg-secondary border-border hover:bg-civic-purple hover:text-white text-xs gap-2 transition-all">
-                  <Download className="w-3 h-3" /> DOWNLOAD FULL AUDIT REPORT
+              <CardFooter className="bg-background/40 border-t p-4">
+                <Button className="w-full bg-secondary border-border hover:bg-civic-purple hover:text-white text-[10px] font-bold gap-2 transition-all h-10 rounded-xl">
+                  <Download className="w-3.5 h-3.5" /> AUDIT REPORT (.PDF)
                 </Button>
               </CardFooter>
             </Card>

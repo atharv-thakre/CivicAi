@@ -2,8 +2,8 @@ import React, { createContext, useContext, useReducer } from 'react';
 import { mockComplaint } from '../mockData';
 
 const initialState = {
-  complaints: [mockComplaint],
-  activeComplaintId: mockComplaint.id,
+  complaints: [],
+  activeComplaintId: null,
   user: null,
   loading: false,
 };
