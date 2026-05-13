@@ -4,6 +4,7 @@ import { mockComplaint } from '../mockData';
 const initialState = {
   complaints: [mockComplaint],
   activeComplaintId: mockComplaint.id,
+  user: null,
   loading: false,
 };
 
@@ -15,6 +16,8 @@ function appReducer(state, action) {
       return { ...state, complaints: action.payload };
     case 'SET_ACTIVE_COMPLAINT':
       return { ...state, activeComplaintId: action.payload };
+    case 'SET_USER':
+      return { ...state, user: action.payload };
     case 'UPDATE_COMPLAINT_STATUS':
       return {
         ...state,

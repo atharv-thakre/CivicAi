@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/context/ThemeContext';
+import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -96,7 +97,36 @@ const SidebarItem = ({ to, icon: Icon, label, badge, collapsed, children }) => {
 export const Layout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { state, dispatch } = useApp();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (state.user) return;
+      
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch('https://app.totalchaos.online/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          dispatch({ type: 'SET_USER', payload: userData });
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+
+    fetchUser();
+  }, [dispatch, state.user]);
+
+  const user = state.user || { name: 'Loading...', id: 'OFF-0000' };
+
 
   return (
     <div className="flex h-screen bg-background overflow-hidden transition-colors duration-500">
@@ -220,8 +250,8 @@ export const Layout = ({ children }) => {
             </Button>
             <div className="flex items-center gap-3">
               <div className="text-right flex flex-col">
-                <span className="text-sm font-semibold">Officer Sharma</span>
-                <span className="text-[10px] text-text-muted">ID: OFF-1129</span>
+                <span className="text-sm font-semibold">{user.name || user.handle || 'Officer'}</span>
+                <span className="text-[10px] text-text-muted">ID: {user.uid ? user.uid.slice(0, 8).toUpperCase() : (user.id || 'OFF-0000')}</span>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -229,8 +259,8 @@ export const Layout = ({ children }) => {
                   render={
                     <div className="w-9 h-9 rounded-full bg-border border border-border cursor-pointer overflow-hidden">
                       <Avatar className="h-full w-full">
-                        <AvatarImage src="https://github.com/shadcn.png" />
-                        <AvatarFallback>SR</AvatarFallback>
+                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.handle || user.email}`} />
+                        <AvatarFallback>{(user.name || 'O').charAt(0)}</AvatarFallback>
                       </Avatar>
                     </div>
                   }
