@@ -29,7 +29,9 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeReport, setActiveReport] = useState(null);
-  const [reportingStatus, setReportingStatus] = useState({}); // { [ref]: 'loading' | 'success' | 'error' }
+  const [reportingStatus, setReportingStatus] = useState({}); // { [ref]: 'detecting-location' | 'posting' | 'success' | 'error' }
+
+  const BASE = 'https://app.totalchaos.online';
 
   useEffect(() => {
     fetchComplaints();
@@ -54,9 +56,9 @@ const Dashboard = () => {
 
   const postEvidence = (ref, file) => {
     setReportingStatus(prev => ({ ...prev, [ref]: 'detecting-location' }));
-    
+
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      alert('Geolocation is not supported by your browser');
       setReportingStatus(prev => ({ ...prev, [ref]: null }));
       return;
     }
@@ -64,38 +66,88 @@ const Dashboard = () => {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        console.log(`Detected location for complaint ${ref}: ${latitude}, ${longitude}`);
-        
+        console.log(`Location for complaint ${ref}:`, latitude, longitude);
+
         setReportingStatus(prev => ({ ...prev, [ref]: 'posting' }));
-        
-        // Placeholder for future POST route
-        setTimeout(() => {
-          console.log(`Evidence for ${ref} would be posted here with location:`, { latitude, longitude, file });
+
+        try {
+          const token = localStorage.getItem('token');
+          const formData = new FormData();
+          formData.append('complaint_id', String(ref));
+          formData.append('label', 'front');
+          formData.append('image', file);
+
+          const res = await fetch(`${BASE}/complaint/image`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Upload failed (${res.status})`);
+          }
+
+          const data = await res.json();
+          console.log('Evidence uploaded:', data);
+
           setReportingStatus(prev => ({ ...prev, [ref]: 'success' }));
           setTimeout(() => {
             setReportingStatus(prev => ({ ...prev, [ref]: null }));
             setActiveReport(null);
           }, 2000);
-        }, 1500);
+        } catch (err) {
+          console.error('Evidence upload error:', err);
+          alert(`Failed to upload evidence: ${err.message}`);
+          setReportingStatus(prev => ({ ...prev, [ref]: null }));
+        }
       },
       (err) => {
-        console.error("Location error:", err);
-        alert("Failed to detect location. Please enable location services.");
+        console.error('Location error:', err);
+        alert('Failed to detect location. Please enable location services.');
         setReportingStatus(prev => ({ ...prev, [ref]: null }));
       }
     );
   };
 
-  const markComplete = (ref) => {
+  const markComplete = async (ref) => {
     setReportingStatus(prev => ({ ...prev, [ref]: 'posting' }));
-    setTimeout(() => {
-      console.log(`Complaint ${ref} marked as complete`);
+
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('complaint_id', String(ref));
+      formData.append('status', 'resolved');
+
+      const res = await fetch(`${BASE}/complaint/status`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Status update failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      console.log('Status updated:', data.message);
+
+      // Optimistically update the local complaint status
+      setComplaints(prev =>
+        prev.map(c => (c.ref === ref ? { ...c, status: 'resolved' } : c))
+      );
+
       setReportingStatus(prev => ({ ...prev, [ref]: 'success' }));
       setTimeout(() => {
         setReportingStatus(prev => ({ ...prev, [ref]: null }));
         setActiveReport(null);
       }, 2000);
-    }, 1000);
+    } catch (err) {
+      console.error('Mark complete error:', err);
+      alert(`Failed to mark complete: ${err.message}`);
+      setReportingStatus(prev => ({ ...prev, [ref]: null }));
+    }
   };
 
   const fetchComplaints = async () => {
