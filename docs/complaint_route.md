@@ -1,4 +1,4 @@
-# Complaint Route Documentation
+# Chain Route Documentation
 
 Base domain used in the examples below:
 
@@ -6,245 +6,165 @@ Base domain used in the examples below:
 const baseDomain = "http://localhost:8000";
 ```
 
-Some routes are public, while create/update/upload routes require authentication. For protected routes, send:
+All routes in this group are public and do not require authentication.
 
-```http
-Authorization: Bearer <your_access_token>
-```
+## `GET /chain/verify`
 
-When sending JSON or form bodies, also include:
-
-```http
-Content-Type: application/json
-```
-
-or, for file uploads:
-
-```http
-Content-Type: multipart/form-data
-```
-
-## `GET /complaint/nearby`
-
-Returns complaints near the provided coordinates.
+Verifies the integrity of the blockchain chain.
 
 ### Input schema
 
-Query parameters:
-
-- `lat` required number.
-- `lng` required number.
+No request body or query parameters.
 
 ### Fetch example
 
 ```js
 const baseDomain = "http://localhost:8000";
-const lat = 28.6139;
-const lng = 77.209;
 
-const response = await fetch(`${baseDomain}/complaint/nearby?lat=${lat}&lng=${lng}`);
+const response = await fetch(`${baseDomain}/chain/verify`);
 const data = await response.json();
 console.log(data);
 ```
 
 ### Response output
 
-Success response: an array of `NearbyComplaintResponse` objects.
+Success response:
 
-Schema shape:
+```json
+{
+  "status": true
+}
+```
+
+Notes:
+
+- `status` is a boolean indicating whether the chain verification passed.
+
+## `GET /chain/records/{commit_sha}`
+
+Returns records associated with a specific commit SHA from the blockchain.
+
+### Input schema
+
+Path parameter:
+
+- `commit_sha` required string. The commit SHA to retrieve records for.
+
+### Fetch example
+
+```js
+const baseDomain = "http://localhost:8000";
+const commitSha = "abc123def456";
+
+const response = await fetch(`${baseDomain}/chain/records/${commitSha}`);
+const data = await response.json();
+console.log(data);
+```
+
+### Response output
+
+Success response: records associated with the commit.
+
+The exact shape depends on the stored records. On success, returns the record objects.
+
+Possible error responses:
 
 ```json
 [
-	{
-		"ref": 1,
-		"title": "Pothole on main road",
-		"description": "Large pothole near the junction",
-		"status": "open",
-		"category": "roads",
-		"address": "Main Street",
-		"pincode": "110001",
-		"ai_tags": ["road", "pothole"],
-		"upvotes": 3,
-		"created_at": "2026-05-11T10:00:00Z"
-	}
+    {
+        "ref": 1001,
+        "user_id": 45,
+        "title": "Pothole issue near MP Nagar",
+        "category": "Road Maintenance",
+        "ai_department": "Municipal Corporation",
+        "ai_confidence": 0.94,
+        "ai_severity": "High",
+        "ai_tags": [
+            "road",
+            "pothole",
+            "public safety"
+        ],
+        "is_urgent": true,
+        "status": "open",
+        "assigned_to": "Officer_101",
+        "lat": 23.2599,
+        "lng": 77.4126,
+        "address": "MP Nagar Zone 1, Bhopal",
+        "pincode": "462011",
+        "internal_priority": 8.7,
+        "upvotes": 34,
+        "created_at": "2026-05-09 14:30:33.759993",
+        "previous_hash": "GENESIS_BLOCK",
+        "current_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107"
+    },
+    {
+        "ref": 1002,
+        "user_id": 76,
+        "title": "Pothole issue near MP Nagar",
+        "category": "Road Maintenance",
+        "ai_department": "Municipal Corporation",
+        "ai_confidence": 0.94,
+        "ai_severity": "High",
+        "ai_tags": [
+            "road",
+            "pothole",
+            "public safety"
+        ],
+        "is_urgent": true,
+        "status": "open",
+        "assigned_to": "Officer_101",
+        "lat": 23.2599,
+        "lng": 77.4126,
+        "address": "MP Nagar Zone 1, Bhopal",
+        "pincode": "462011",
+        "internal_priority": 8.7,
+        "upvotes": 34,
+        "created_at": "2026-05-09 14:32:00.180422",
+        "previous_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107",
+        "current_hash": "35b2f261bf7aa168673143ae4d8320e295746db7f746ad4994ff2ccb1efae63c"
+    },
+    {
+        "ref": 2,
+        "user_id": 1,
+        "title": "broken wires posing a threat to locals",
+        "category": "electricity",
+        "ai_department": null,
+        "ai_confidence": null,
+        "ai_severity": null,
+        "ai_tags": [],
+        "is_urgent": false,
+        "status": "draft",
+        "assigned_to": null,
+        "lat": 22.757,
+        "lng": 75.8653,
+        "address": "J-180 Harshwardhan Nagar",
+        "pincode": "462003",
+        "internal_priority": 0.0,
+        "upvotes": 0,
+        "created_at": "2026-05-11 16:51:42.274961",
+        "previous_hash": "c78db55f6e22a15d34cb2f70ab0e399a14068bd93d8cfd756dd38db8aab2d39b",
+        "current_hash": "72e4a03b779c26925c00deb15ce37464d8524865a83eaaf14801c52dc28f5c1b"
+    }
 ]
 ```
 
-## `GET /complaint/`
+## `GET /chain/diff/{commit_sha}`
 
-Returns the full complaint detail for a complaint id.
+Returns the diff of changes made in a specific commit.
 
 ### Input schema
 
-Query parameters:
+Path parameter:
 
-- `complaint_id` required integer.
+- `commit_sha` required string. The commit SHA to retrieve the diff for.
 
 ### Fetch example
 
 ```js
 const baseDomain = "http://localhost:8000";
-const complaintId = 1;
+const commitSha = "abc123def456";
 
-const response = await fetch(`${baseDomain}/complaint?complaint_id=${complaintId}`);
-const data = await response.json();
-console.log(data);
-```
-
-### Response output
-
-Success response: a `ComplaintResponse` object.
-
-Schema shape:
-
-```json
-{
-	"ref": 1,
-	"title": "Pothole on main road",
-	"description": "Large pothole near the junction",
-	"translated_text": null,
-	"category": "roads",
-	"ai_department": "Public Works",
-	"ai_confidence": 0.91,
-	"ai_severity": "high",
-	"ai_tags": ["road", "pothole"],
-	"is_urgent": true,
-	"status": "open",
-	"assigned_to": null,
-	"lat": 28.6139,
-	"lng": 77.209,
-	"address": "Main Street",
-	"pincode": "110001",
-	"image_url": "/data/complaints/1/img_main.jpg",
-	"report_url": "/report/1",
-	"action_plan": {
-		"root_cause": "Tree collapse likely caused by storm or weak structural integrity due to recent rainfall",
-		"impact": "Road blockage causing traffic disruption, potential accidents, and safety risks to pedestrians and drivers",
-		"action_plan": [
-			"Barricade the area to prevent accidents and ensure pedestrian safety",
-			"Deploy tree cutting team to inspect the area and remove the fallen tree safely",
-			"Clear debris and restore road access to normal traffic flow"
-		],
-		"eta": "4-6 hours",
-		"resources": [
-			"tree cutting crew",
-			"barricades",
-			"signage equipment",
-			"chainsaws",
-			"transport vehicle"
-		]
-	},
-	"internal_priority": 0.75,
-	"upvotes": 3,
-	"created_at": "2026-05-11T10:00:00Z"
-}
-```
-
-Action plan schema:
-
-- `root_cause` string describing the likely cause of the complaint.
-- `impact` string describing the operational or public impact.
-- `action_plan` array of strings describing the recommended response steps.
-- `eta` string describing the estimated time to resolve.
-- `resources` array of strings describing the required resources.
-
-Possible error responses:
-
-- `404` with `{"detail":"Complaint not found"}` when the complaint id does not exist.
-
-## `POST /complaint/create`
-
-Creates a new complaint and uploads the main image for it.
-
-### Authentication
-
-Required. Send a Bearer token in the `Authorization` header.
-
-### Input schema
-
-Multipart form-data fields from `ComplaintCreate.as_form` plus one file field:
-
-- `title` required string.
-- `description` required string.
-- `lat` required number.
-- `lng` required number.
-- `address` required string.
-- `pincode` required string.
-- `category` required string.
-- `image` required file. Must be JPG or PNG.
-
-### Fetch example
-
-```js
-const baseDomain = "http://localhost:8000";
-
-const formData = new FormData();
-formData.append("title", "Pothole on main road");
-formData.append("description", "Large pothole near the junction");
-formData.append("lat", "28.6139");
-formData.append("lng", "77.209");
-formData.append("address", "Main Street");
-formData.append("pincode", "110001");
-formData.append("category", "roads");
-formData.append("image", fileInput.files[0]);
-
-const response = await fetch(`${baseDomain}/complaint/create`, {
-	method: "POST",
-	headers: {
-		Authorization: `Bearer ${token}`,
-	},
-	body: formData,
-});
-
-const data = await response.json();
-console.log(data);
-```
-
-### Response output
-
-Success response: the created complaint object returned by the backend.
-
-The response is the database complaint record, so the exact shape depends on the stored model. It will include complaint identifiers and the saved complaint fields.
-
-Possible error responses:
-
-- `400` with `"Only JPG/PNG allowed"` when the uploaded file type is invalid.
-- `401` when the bearer token is missing or invalid.
-
-## `POST /complaint/image`
-
-Uploads an additional image for an existing complaint.
-
-### Authentication
-
-Required. Send a Bearer token in the `Authorization` header.
-
-### Input schema
-
-Multipart form-data fields:
-
-- `complaint_id` required integer.
-- `label` required string. Allowed values: `front`, `left`, `right`, `back`.
-- `image` required file. Must be JPG or PNG.
-
-### Fetch example
-
-```js
-const baseDomain = "http://localhost:8000";
-
-const formData = new FormData();
-formData.append("complaint_id", "1");
-formData.append("label", "front");
-formData.append("image", fileInput.files[0]);
-
-const response = await fetch(`${baseDomain}/complaint/image`, {
-	method: "POST",
-	headers: {
-		Authorization: `Bearer ${token}`,
-	},
-	body: formData,
-});
-
+const response = await fetch(`${baseDomain}/chain/diff/${commitSha}`);
 const data = await response.json();
 console.log(data);
 ```
@@ -255,91 +175,133 @@ Success response:
 
 ```json
 {
-	"message": "Image uploaded",
-	"complaint_id": 1,
-	"label": "front",
-	"path": "d:/Code PlayGround/PROJECTS/Civic AI/data/complaints/1/img_front.jpg"
+  "diff": "string"
 }
 ```
 
 Possible error responses:
 
-- `400` with `"Invalid label"` when the label is not one of the allowed values.
-- `400` with `"Only JPG/PNG allowed"` when the uploaded file type is invalid.
-- `401` when the bearer token is missing or invalid.
+- `{"error": "Invaild commit_sha"}` when the commit SHA is invalid or not found.
 
-## `PUT /complaint/status`
+## `GET /chain/audits/{user_id}`
 
-Updates the status of a complaint.
-
-### Authentication
-
-Required. Send a Bearer token in the `Authorization` header.
+Returns audit records for a specific user.
 
 ### Input schema
 
-Multipart form-data fields:
+Path parameter:
 
-- `complaint_id` required integer.
-- `status` required string.
+- `user_id` required integer. The user id to retrieve audits for.
 
 ### Fetch example
 
 ```js
 const baseDomain = "http://localhost:8000";
+const userId = 1;
 
-const formData = new FormData();
-formData.append("complaint_id", "1");
-formData.append("status", "resolved");
-
-const response = await fetch(`${baseDomain}/complaint/status`, {
-	method: "PUT",
-	headers: {
-		Authorization: `Bearer ${token}`,
-	},
-	body: formData,
-});
-
+const response = await fetch(`${baseDomain}/chain/audits/${userId}`);
 const data = await response.json();
 console.log(data);
 ```
 
 ### Response output
 
-Success response:
+Success response: an array of audit objects for the user.
+
+Example shape:
+
+```json
+[
+  {
+    "id": 1,
+    "user_id": 1,
+    "action": "created_complaint",
+    "timestamp": "2026-05-11T10:00:00Z"
+  }
+]
+```
+
+## `GET /chain/audits`
+
+Returns all audit records across all users.
+
+### Input schema
+
+No request body or query parameters.
+
+### Fetch example
+
+```js
+const baseDomain = "http://localhost:8000";
+
+const response = await fetch(`${baseDomain}/chain/audits`);
+const data = await response.json();
+console.log(data);
+```
+
+### Response output
+
+Success response: an array of all audit objects.
+
+Example shape:
+
+```json
+[
+  {
+    "id": 1,
+    "user_id": 1,
+    "action": "created_complaint",
+    "timestamp": "2026-05-11T10:00:00Z"
+  },
+  {
+    "id": 2,
+    "user_id": 2,
+    "action": "voted_complaint",
+    "timestamp": "2026-05-11T10:05:00Z"
+  }
+]
+```
+
+## `POST /chain/mainnet/create`
+
+Creates a new mainchain record, linking blockchain data to a complaint.
+
+### Input schema
+
+Schema: `CreateMainchainRecord`
 
 ```json
 {
-	"message": "Complaint : 1 status updated to resolved"
+  "record_id": 1,
+  "hash_token": "abc123def456...",
+  "commit_id": "commit_sha_123",
+  "wallet": "0x742d35Cc6634C0532925a3b844Bc11e7c2D22e2d"
 }
 ```
 
-Possible error responses:
+Fields:
 
-- `404` with `{"detail":"Complaint not found"}` when the complaint id does not exist or status update fails.
-- `401` when the bearer token is missing or invalid.
-
-## `GET /complaint/officer`
-
-Returns complaints assigned to the authenticated officer.
-
-### Authentication
-
-Required. Send a Bearer token in the `Authorization` header.
-
-### Input schema
-
-No request body or query parameters.
+- `record_id` required integer. The complaint or record id to link.
+- `hash_token` required string. The blockchain hash token.
+- `commit_id` required string. The blockchain commit id.
+- `wallet` required string. The wallet address associated with this record.
 
 ### Fetch example
 
 ```js
 const baseDomain = "http://localhost:8000";
-const token = localStorage.getItem("token");
 
-const response = await fetch(`${baseDomain}/complaint/officer`, {
-	method: "GET",
-	headers: { Authorization: `Bearer ${token}` },
+const response = await fetch(`${baseDomain}/chain/mainnet/create`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    record_id: 1,
+    hash_token: "abc123def456...",
+    commit_id: "commit_sha_123",
+    wallet: "0x742d35Cc6634C0532925a3b844Bc11e7c2D22e2d",
+  }),
 });
 
 const data = await response.json();
@@ -348,17 +310,64 @@ console.log(data);
 
 ### Response output
 
-Success response: an array of complaint objects assigned to the authenticated officer.
+Success response: the created mainchain record object.
 
-Example shape matches the `ComplaintResponse` fields (list form).
+Example shape:
 
-Possible error responses:
+```json
+{
+  "id": 1,
+  "record_id": 1,
+  "hash_token": "abc123def456...",
+  "commit_id": "commit_sha_123",
+  "wallet": "0x742d35Cc6634C0532925a3b844Bc11e7c2D22e2d",
+  "created_at": "2026-05-11T10:00:00Z"
+}
+```
 
-- `401` when the bearer token is missing or invalid.
+## `GET /chain/mainnet/{user_id}`
 
-## `GET /complaint/all`
+Returns all mainchain records for a specific user.
 
-Returns all complaints in the system (public listing).
+### Input schema
+
+Path parameter:
+
+- `user_id` required integer. The user id to retrieve mainchain records for.
+
+### Fetch example
+
+```js
+const baseDomain = "http://localhost:8000";
+const userId = 1;
+
+const response = await fetch(`${baseDomain}/chain/mainnet/${userId}`);
+const data = await response.json();
+console.log(data);
+```
+
+### Response output
+
+Success response: an array of mainchain records for the user.
+
+Example shape:
+
+```json
+[
+  {
+    "id": 1,
+    "record_id": 1,
+    "hash_token": "abc123def456...",
+    "commit_id": "commit_sha_123",
+    "wallet": "0x742d35Cc6634C0532925a3b844Bc11e7c2D22e2d",
+    "created_at": "2026-05-11T10:00:00Z"
+  }
+]
+```
+
+## `GET /chain/mainnet`
+
+Returns all mainchain records across all users.
 
 ### Input schema
 
@@ -369,18 +378,34 @@ No request body or query parameters.
 ```js
 const baseDomain = "http://localhost:8000";
 
-const response = await fetch(`${baseDomain}/complaint/all`);
+const response = await fetch(`${baseDomain}/chain/mainnet`);
 const data = await response.json();
 console.log(data);
 ```
 
 ### Response output
 
-Success response: an array of all complaint objects in the system.
+Success response: an array of all mainchain records.
 
-Example shape: an array of objects with the same fields as the `ComplaintResponse` (summary or full objects depending on backend implementation).
+Example shape:
 
-Possible error responses:
-
-- `500` on server error.
-
+```json
+[
+  {
+    "id": 1,
+    "record_id": 1,
+    "hash_token": "abc123def456...",
+    "commit_id": "commit_sha_123",
+    "wallet": "0x742d35Cc6634C0532925a3b844Bc11e7c2D22e2d",
+    "created_at": "2026-05-11T10:00:00Z"
+  },
+  {
+    "id": 2,
+    "record_id": 2,
+    "hash_token": "xyz789uvw012...",
+    "commit_id": "commit_sha_456",
+    "wallet": "0x123456789abcdef...",
+    "created_at": "2026-05-11T10:05:00Z"
+  }
+]
+```
