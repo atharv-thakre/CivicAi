@@ -20,8 +20,14 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronRight,
-  Users
+  Users,
+  Wallet,
+  Plus,
+  ArrowUpRight,
+  DatabaseZap,
+  Activity
 } from 'lucide-react';
+import { ethers } from 'ethers';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +37,60 @@ import { cn } from '@/lib/utils';
 
 const HASH_SHORT = (h) => h ? `${h.slice(0, 6)}…${h.slice(-6)}` : 'N/A';
 
+const CONTRACT_ADDRESS = "0xDA2F1f358244D6F80e0eB60aF0823AE6577BD138";
+const ABI = [
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "id", "type": "uint256" },
+      { "indexed": false, "internalType": "bytes32", "name": "dataHash", "type": "bytes32" },
+      { "indexed": false, "internalType": "string", "name": "commitId", "type": "string" },
+      { "indexed": false, "internalType": "address", "name": "sender", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+    ],
+    "name": "RecordStored",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "_dataHash", "type": "bytes32" },
+      { "internalType": "string", "name": "_commitId", "type": "string" }
+    ],
+    "name": "storeRecord",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "string", "name": "_commitId", "type": "string" }
+    ],
+    "name": "findByCommitId",
+    "outputs": [
+      { "internalType": "uint256", "name": "id", "type": "uint256" },
+      { "internalType": "bytes32", "name": "dataHash", "type": "bytes32" },
+      { "internalType": "address", "name": "sender", "type": "address" },
+      { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "_id", "type": "uint256" }
+    ],
+    "name": "getRecord",
+    "outputs": [
+      { "internalType": "bytes32", "name": "", "type": "bytes32" },
+      { "internalType": "string", "name": "", "type": "string" },
+      { "internalType": "address", "name": "", "type": "address" },
+      { "internalType": "uint256", "name": "", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
+
 const AuditTrailPage = () => {
   const [audits, setAudits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,9 +98,116 @@ const AuditTrailPage = () => {
   const [selectedBlock, setSelectedBlock] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // dApp State
+  const [dataHash, setDataHash] = useState('');
+  const [commitId, setCommitId] = useState('');
+  const [recordId, setRecordId] = useState('');
+  const [searchCommit, setSearchCommit] = useState('');
+  const [account, setAccount] = useState(null);
+  const [dAppStatus, setDAppStatus] = useState('🔌 Not connected');
+  const [isDAppError, setIsDAppError] = useState(false);
+  const [isDAppProcessing, setIsDAppProcessing] = useState(false);
+  const [contract, setContract] = useState(null);
+
   useEffect(() => {
     fetchAudits();
+    setupListeners();
   }, []);
+
+  const setupListeners = () => {
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", () => window.location.reload());
+      window.ethereum.on("chainChanged", () => window.location.reload());
+    }
+  };
+
+  const setStatus = (msg, isError = false) => {
+    setDAppStatus(msg);
+    setIsDAppError(isError);
+  };
+
+  const ensureSepolia = async () => {
+    const SEPOLIA_CHAIN_ID = "0xaa36a7";
+    const chainId = await window.ethereum.request({ method: "eth_chainId" });
+    if (chainId !== SEPOLIA_CHAIN_ID) {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: SEPOLIA_CHAIN_ID }],
+      });
+    }
+  };
+
+  const connectWallet = async () => {
+    try {
+      if (!window.ethereum) throw new Error("MetaMask not found");
+      await ensureSepolia();
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const addr = accounts[0];
+      setAccount(addr);
+      const contractInstance = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+      setContract(contractInstance);
+      setStatus(`✅ Connected: ${addr.slice(0, 6)}...${addr.slice(-4)}`);
+    } catch (err) {
+      console.error(err);
+      setStatus(`❌ ${err.message}`, true);
+    }
+  };
+
+  const handleStore = async () => {
+    try {
+      if (!contract) throw new Error("Connect wallet first");
+      if (!dataHash || !commitId) throw new Error("Missing input");
+      if (!/^0x[a-fA-F0-9]{64}$/.test(dataHash)) throw new Error("Invalid hash format");
+
+      setIsDAppProcessing(true);
+      setStatus("⏳ Sending transaction...");
+      const tx = await contract.storeRecord(dataHash, commitId);
+      setStatus(`📤 TX Sent: ${tx.hash.slice(0, 10)}...`);
+      await tx.wait();
+      setStatus("✅ Record Stored");
+      setDataHash('');
+      setCommitId('');
+    } catch (err) {
+      console.error(err);
+      setStatus(`❌ ${err.reason || err.message}`, true);
+    } finally {
+      setIsDAppProcessing(false);
+    }
+  };
+
+  const handleFetch = async () => {
+    try {
+      if (!contract) throw new Error("Connect wallet first");
+      if (!recordId) throw new Error("Enter Record ID");
+      
+      setIsDAppProcessing(true);
+      const res = await contract.getRecord(recordId);
+      const [hash, commit, sender, timestamp] = res;
+      setStatus(`📦 ID:${recordId} | Commit: ${commit}`);
+      console.log("Record Found:", { hash, commit, sender, timestamp });
+    } catch (err) {
+      setStatus("❌ Record not found", true);
+    } finally {
+      setIsDAppProcessing(false);
+    }
+  };
+
+  const handleFind = async () => {
+    try {
+      if (!contract) throw new Error("Connect wallet first");
+      if (!searchCommit) throw new Error("Enter Commit ID");
+
+      setIsDAppProcessing(true);
+      const res = await contract.findByCommitId(searchCommit);
+      setStatus(`🔍 Found ID: ${res.id}`);
+    } catch (err) {
+      setStatus("❌ Not found", true);
+    } finally {
+      setIsDAppProcessing(false);
+    }
+  };
 
   const fetchAudits = async () => {
     setLoading(true);
@@ -392,9 +559,7 @@ const AuditTrailPage = () => {
                       </div>
                     </CardContent>
                     <CardFooter className="bg-secondary/20 p-4 justify-end border-t rounded-b-3xl">
-                      <Button variant="outline" size="sm" className="text-xs h-8 border-border">
-                        REPORT DISCREPANCY
-                      </Button>
+                      {/* Non-functional button removed */}
                     </CardFooter>
                   </Card>
                 </motion.div>
@@ -467,10 +632,115 @@ const AuditTrailPage = () => {
                 )}
               </CardContent>
               <CardFooter className="bg-background/40 border-t p-4">
-                <Button className="w-full bg-secondary border-border hover:bg-civic-purple hover:text-white text-[10px] font-bold gap-2 transition-all h-10 rounded-xl">
-                  <Download className="w-3.5 h-3.5" /> AUDIT REPORT (.PDF)
-                </Button>
+                {/* Non-functional button removed */}
               </CardFooter>
+            </Card>
+
+            {/* dApp Registry Card (v3 implementation) */}
+            <Card className="border-civic-purple/20 bg-card rounded-3xl overflow-hidden shadow-xl">
+              <CardHeader className="bg-civic-purple/5 border-b pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <DatabaseZap className="w-4 h-4 text-civic-purple" />
+                    AUDIT REGISTRY
+                  </CardTitle>
+                  {!account ? (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={connectWallet}
+                      className="h-7 text-[10px] font-bold rounded-full border-civic-purple/30 text-civic-purple hover:bg-civic-purple hover:text-white"
+                    >
+                      <Wallet className="w-3 h-3 mr-1" /> CONNECT
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[9px]">
+                      CONNECTED
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 space-y-5">
+                {/* Store Record Section */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Store Record</p>
+                  <div className="space-y-2">
+                    <Input 
+                      placeholder="0x Data Hash (bytes32)" 
+                      value={dataHash}
+                      onChange={(e) => setDataHash(e.target.value)}
+                      className="h-9 text-xs bg-secondary/30 border-border/50 rounded-xl"
+                    />
+                    <Input 
+                      placeholder="Commit ID" 
+                      value={commitId}
+                      onChange={(e) => setCommitId(e.target.value)}
+                      className="h-9 text-xs bg-secondary/30 border-border/50 rounded-xl"
+                    />
+                    <Button 
+                      onClick={handleStore}
+                      disabled={isDAppProcessing || !account}
+                      className="w-full h-9 text-xs font-bold rounded-xl bg-civic-purple hover:bg-civic-purple/90"
+                    >
+                      {isDAppProcessing ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Plus className="w-3 h-3 mr-2" />}
+                      STORE ON-CHAIN
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator className="opacity-50" />
+
+                {/* Get/Search Section */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Fetch</p>
+                    <div className="flex gap-1">
+                      <Input 
+                        placeholder="ID" 
+                        value={recordId}
+                        onChange={(e) => setRecordId(e.target.value)}
+                        className="h-8 text-xs bg-secondary/30 border-border/50 rounded-lg"
+                      />
+                      <Button 
+                        size="icon" 
+                        onClick={handleFetch}
+                        disabled={isDAppProcessing || !account}
+                        className="h-8 w-8 shrink-0 bg-secondary hover:bg-civic-purple group rounded-lg"
+                      >
+                        <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-white" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Find</p>
+                    <div className="flex gap-1">
+                      <Input 
+                        placeholder="Commit" 
+                        value={searchCommit}
+                        onChange={(e) => setSearchCommit(e.target.value)}
+                        className="h-8 text-xs bg-secondary/30 border-border/50 rounded-lg"
+                      />
+                      <Button 
+                        size="icon" 
+                        onClick={handleFind}
+                        disabled={isDAppProcessing || !account}
+                        className="h-8 w-8 shrink-0 bg-secondary hover:bg-civic-purple group rounded-lg"
+                      >
+                        <Search className="w-3.5 h-3.5 text-muted-foreground group-hover:text-white" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Indicator */}
+                <div className={cn(
+                  "p-3 rounded-2xl border text-[10px] font-mono flex items-start gap-2",
+                  isDAppError ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
+                )}>
+                  <Activity className="w-3 h-3 mt-0.5 shrink-0" />
+                  <span className="break-all">{dAppStatus}</span>
+                </div>
+              </CardContent>
             </Card>
 
             <Card className="border-civic-green/20 rounded-3xl">
@@ -484,9 +754,7 @@ const AuditTrailPage = () => {
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       This document and its audit chain are cryptographically signed. Any modification attempt to the database will invalidate the master block pointer instantly.
                     </p>
-                    <Button variant="link" className="text-civic-green p-0 h-auto text-xs font-bold gap-1 mt-2">
-                      VERIFY MASTER CHAIN <ArrowRight className="w-3 h-3" />
-                    </Button>
+                    {/* Non-functional button removed */}
                   </div>
                 </div>
               </CardContent>

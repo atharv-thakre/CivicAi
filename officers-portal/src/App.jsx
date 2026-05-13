@@ -5,7 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import Dashboard from './pages/dashboard';
 import DSSPage from './pages/dss';
 import ActionPlanDetailPage from './pages/plans/Detail';
-import AuditTrailPage from './pages/audit';
+import AuditTrailPage from './pages/BlockChain';
 import MapViewPage from './pages/complaints/Map';
 import LoginPage from './pages/auth/Login';
 
