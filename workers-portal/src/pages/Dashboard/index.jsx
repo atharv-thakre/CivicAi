@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Search, 
-  LogOut, 
-  Loader2, 
-  AlertCircle, 
-  MapPin, 
-  Clock, 
+import {
+  Search,
+  LogOut,
+  Loader2,
+  AlertCircle,
+  MapPin,
+  Clock,
   ChevronRight,
   Filter,
   HardHat,
@@ -73,8 +73,8 @@ const Dashboard = () => {
         try {
           const token = localStorage.getItem('token');
           const formData = new FormData();
-          formData.append('complaint_id', String(ref));
-          formData.append('label', 'front');
+          formData.append('complaint_id', ref);
+          formData.append('label', 'after');
           formData.append('image', file);
 
           const res = await fetch(`${BASE}/complaint/image`, {
@@ -116,8 +116,8 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
-      formData.append('complaint_id', String(ref));
-      formData.append('status', 'resolved');
+      formData.append('complaint_id', ref);
+      formData.append('status', 'submitted');
 
       const res = await fetch(`${BASE}/complaint/status`, {
         method: 'PUT',
@@ -135,7 +135,7 @@ const Dashboard = () => {
 
       // Optimistically update the local complaint status
       setComplaints(prev =>
-        prev.map(c => (c.ref === ref ? { ...c, status: 'resolved' } : c))
+        prev.map(c => (c.ref === ref ? { ...c, status: 'submitted' } : c))
       );
 
       setReportingStatus(prev => ({ ...prev, [ref]: 'success' }));
@@ -175,7 +175,7 @@ const Dashboard = () => {
     navigate('/login');
   };
 
-  const filteredComplaints = complaints.filter(complaint => 
+  const filteredComplaints = complaints.filter(complaint =>
     complaint.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     complaint.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     complaint.ref?.toString().includes(searchQuery)
@@ -186,6 +186,9 @@ const Dashboard = () => {
       case 'open': return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
       case 'in-progress': return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
       case 'resolved': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
+      case 'submitted':
+      return 'text-purple-400 bg-purple-400/10 border-purple-400/20';
+
       default: return 'text-slate-400 bg-slate-400/10 border-slate-400/20';
     }
   };
@@ -216,8 +219,8 @@ const Dashboard = () => {
           <div className="flex-1 max-w-2xl flex items-center gap-2">
             <div className="relative flex-1 group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
-              <Input 
-                placeholder="Search complaints..." 
+              <Input
+                placeholder="Search complaints..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-10 pl-10 pr-4 rounded-xl bg-secondary/30 border-border/50 focus-visible:ring-blue-600/30 text-sm transition-all w-full"
@@ -228,9 +231,9 @@ const Dashboard = () => {
             </Button>
           </div>
 
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleLogout}
             className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10 gap-2 shrink-0"
           >
@@ -286,7 +289,7 @@ const Dashboard = () => {
                     <h3 className="text-lg font-bold mb-2 line-clamp-1 group-hover:text-blue-400 transition-colors">
                       {complaint.title || 'Untitled Complaint'}
                     </h3>
-                    
+
                     <p className="text-sm text-muted-foreground mb-6 line-clamp-2 leading-relaxed">
                       {complaint.description || 'No description provided.'}
                     </p>
@@ -298,8 +301,8 @@ const Dashboard = () => {
                       </div>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <Clock className="w-4 h-4 shrink-0 text-blue-500" />
-                        <span>{new Date(complaint.created_at).toLocaleDateString(undefined, { 
-                          month: 'short', 
+                        <span>{new Date(complaint.created_at).toLocaleDateString(undefined, {
+                          month: 'short',
                           day: 'numeric',
                           year: 'numeric'
                         })}</span>
@@ -317,7 +320,7 @@ const Dashboard = () => {
                             className="flex flex-col gap-2"
                           >
                             <div className="flex gap-2">
-                              <Button 
+                              <Button
                                 onClick={() => handleAction(complaint.ref, 'complete')}
                                 disabled={!!reportingStatus[complaint.ref]}
                                 className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 shadow-lg shadow-emerald-600/20"
@@ -325,7 +328,7 @@ const Dashboard = () => {
                                 <CheckCircle className="w-4 h-4" />
                                 <span className="text-xs font-bold">Complete</span>
                               </Button>
-                              <Button 
+                              <Button
                                 onClick={() => handleAction(complaint.ref, 'upload')}
                                 disabled={!!reportingStatus[complaint.ref]}
                                 className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-lg shadow-blue-600/20"
@@ -334,8 +337,8 @@ const Dashboard = () => {
                                 <span className="text-xs font-bold">Evidence</span>
                               </Button>
                             </div>
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               onClick={() => setActiveReport(null)}
                               className="h-8 text-[10px] uppercase tracking-widest font-bold text-muted-foreground hover:bg-transparent"
@@ -345,7 +348,7 @@ const Dashboard = () => {
                           </motion.div>
                         ) : (
                           <motion.div key="main-btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                            <Button 
+                            <Button
                               onClick={() => setActiveReport(complaint.ref)}
                               className="w-full h-11 bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white rounded-xl transition-all duration-300 gap-2 border border-blue-600/20 shadow-lg shadow-blue-600/5 group"
                             >
@@ -378,7 +381,7 @@ const Dashboard = () => {
                   </motion.div>
                 ))
               ) : (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="col-span-full py-20 text-center"
