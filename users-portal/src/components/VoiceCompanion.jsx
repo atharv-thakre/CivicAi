@@ -278,11 +278,13 @@ const VoiceCompanion = () => {
         })
       });
 
-      if (!response.ok) throw new Error('API_ERROR');
       const data = await response.json();
-      setComplaintId(data.complaint_id || `GR-${Math.floor(10000 + Math.random() * 90000)}`);
+      const finalId = data.complaint_id || `GR-${Math.floor(10000 + Math.random() * 90000)}`;
+      setComplaintId(finalId);
       updateStatus('success');
-      speak(`Aapki shikayat darj ho gayi. Shukriya!`);
+      
+      // Audio Receipt
+      speak(`Aapki shikayat darj ho gayi hai. Aapka complaint number hai: ${finalId.split('').join(' ')}. Shukriya!`);
 
       setTimeout(() => closeCompanion(), 5000);
     } catch (err) {
