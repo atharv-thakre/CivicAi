@@ -40,12 +40,12 @@ const VoiceCompanion = () => {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'hi-IN';
     utterance.rate = 0.9;
-    
+
     const voices = window.speechSynthesis.getVoices();
-    const hindiVoice = voices.find(v => v.lang.includes('hi') && v.name.toLowerCase().includes('female')) || 
-                       voices.find(v => v.lang.includes('hi'));
+    const hindiVoice = voices.find(v => v.lang.includes('hi') && v.name.toLowerCase().includes('female')) ||
+      voices.find(v => v.lang.includes('hi'));
     if (hindiVoice) utterance.voice = hindiVoice;
-    
+
     if (onEnd) utterance.onend = onEnd;
     window.speechSynthesis.speak(utterance);
   };
@@ -81,9 +81,9 @@ const VoiceCompanion = () => {
 
   const activateCompanion = async () => {
     if (isActive) return;
-    
+
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    
+
     try {
       if ('wakeLock' in navigator) {
         wakeLockRef.current = await navigator.wakeLock.request('screen');
@@ -94,6 +94,7 @@ const VoiceCompanion = () => {
 
     setIsActive(true);
     updateStatus('recording');
+    transcriptRef.current = '';
     speak("Namaste! Main Civic AI hoon. Apni shikayat boliye 30 second mein, aur apna address bataye.", () => {
       startSTT();
     });
@@ -117,31 +118,45 @@ const VoiceCompanion = () => {
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'hi-IN';
-    recognition.continuous = !isConfirmation;
+    recognition.continuous = false; // Manual restart is more stable for hi-IN on mobile
     recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
-    transcriptRef.current = '';
     recognition.onresult = (event) => {
-      let fullTranscript = '';
-      for (let i = 0; i < event.results.length; ++i) {
-        fullTranscript += event.results[i][0].transcript;
+      let interim = '';
+      let final = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          final += event.results[i][0].transcript;
+        } else {
+          interim += event.results[i][0].transcript;
+        }
       }
-      transcriptRef.current = fullTranscript;
-      setTranscript(fullTranscript);
+      if (final) transcriptRef.current += final + ' ';
+      setTranscript(transcriptRef.current + interim);
     };
 
     recognition.onend = () => {
-      // Small delay to ensure all onresult events are processed
-      setTimeout(() => {
-        if (statusRef.current === 'recording' && !isConfirmation) {
-          const text = transcriptRef.current.trim();
-          if (text.length > 0) {
-            handleRecordingComplete(text);
-          } else {
-            handleAppError("no_speech");
-          }
+      // Restart if still in recording mode and timer is running
+      if (statusRef.current === 'recording' && !isConfirmation && countdown > 0) {
+        try {
+          recognition.start();
+        } catch (e) {
+          console.error("Recognition restart failed", e);
         }
-      }, 500);
+      } else {
+        // Small delay to ensure all onresult events are processed
+        setTimeout(() => {
+          if (statusRef.current === 'recording' && !isConfirmation) {
+            const text = transcriptRef.current.trim();
+            if (text.length > 0) {
+              handleRecordingComplete(text);
+            } else {
+              handleAppError("no_speech");
+            }
+          }
+        }, 500);
+      }
     };
 
     recognition.onerror = (event) => {
@@ -192,13 +207,14 @@ const VoiceCompanion = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'hi-IN';
-    
+
     recognition.onresult = (event) => {
       const result = event.results[0][0].transcript.toLowerCase();
-      if (result.includes('haan') || result.includes('yes') || result.includes('sahi') || result.includes('han')) {
+      if (result.includes('haan') || result.includes('yes') || result.includes('sahi') || result.includes('han') || result.includes('yeah')) {
         submitComplaint(originalText);
-      } else if (result.includes('nahin') || result.includes('no') || result.includes('galat') || result.includes('nahi')) {
+      } else if (result.includes('nahin') || result.includes('no') || result.includes('galat') || result.includes('nahi') || result.includes('nope')) {
         speak("Theek hai. Dobara boliye.", () => {
+          transcriptRef.current = '';
           updateStatus('recording');
           startSTT();
         });
@@ -234,7 +250,7 @@ const VoiceCompanion = () => {
       setComplaintId(data.complaint_id || `GR-${Math.floor(10000 + Math.random() * 90000)}`);
       updateStatus('success');
       speak(`Aapki shikayat darj ho gayi. Shukriya!`);
-      
+
       setTimeout(() => closeCompanion(), 5000);
     } catch (err) {
       handleAppError("api");
@@ -245,7 +261,7 @@ const VoiceCompanion = () => {
     setErrorType(type);
     updateStatus('error');
     clearInterval(timerRef.current);
-    
+
     const messages = {
       network: "Internet slow hai. Kripaya thodi der baad koshish karein.",
       api: "Server mein dikkat hai. Hamari team ko suchit kar diya gaya.",
@@ -253,7 +269,7 @@ const VoiceCompanion = () => {
       unclear: "Aapki awaaz saaf nahi aayi. Kareeb se boliye.",
       no_speech: "Kripaya dobara koshish karein. Phone ko dobara hilaayein."
     };
-    
+
     speak(messages[type] || "Kuch galat hua.");
   };
 
@@ -273,7 +289,7 @@ const VoiceCompanion = () => {
 
   return (
     <AnimatePresence>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -287,7 +303,7 @@ const VoiceCompanion = () => {
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary relative">
               <BrainCircuit size={40} className="animate-pulse" />
               {status === 'recording' && (
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1.2, opacity: 0.2 }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
@@ -307,7 +323,7 @@ const VoiceCompanion = () => {
                   🎙️ Recording... 00:{countdown.toString().padStart(2, '0')}
                 </div>
                 <div className="w-full bg-secondary h-3 rounded-full overflow-hidden">
-                  <motion.div 
+                  <motion.div
                     initial={{ width: '100%' }}
                     animate={{ width: `${(countdown / 30) * 100}%` }}
                     className="h-full bg-primary"
@@ -329,13 +345,13 @@ const VoiceCompanion = () => {
                 <p className="text-sm text-muted-foreground uppercase font-bold tracking-widest">Verify Complaint</p>
                 <p className="text-xl font-medium leading-relaxed italic">"{transcript}"</p>
                 <div className="flex justify-center gap-4 pt-4">
-                   <div className="px-6 py-2 rounded-full bg-primary/10 text-primary font-bold">Boliye "Haan" / "Nahin"</div>
+                  <div className="px-6 py-2 rounded-full bg-primary/10 text-primary font-bold">Boliye "Haan" / "Nahin"</div>
                 </div>
               </div>
             )}
 
             {status === 'success' && (
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className="flex flex-col items-center gap-4 text-civic-green"
@@ -363,34 +379,34 @@ const VoiceCompanion = () => {
 
           {/* Footer Controls */}
           <div className="flex flex-col gap-4">
-             <div className="flex justify-center gap-6">
-                {status === 'recording' && (
-                  <button onClick={() => recognitionRef.current?.stop()} className="flex flex-col items-center gap-2">
-                    <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
-                      <X size={24} />
-                    </div>
-                    <span className="text-xs font-bold uppercase">Stop</span>
-                  </button>
-                )}
-                {(status === 'error' || status === 'confirming') && (
-                  <button onClick={() => { updateStatus('recording'); startSTT(); }} className="flex flex-col items-center gap-2">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                      <RotateCcw size={24} />
-                    </div>
-                    <span className="text-xs font-bold uppercase">Retry</span>
-                  </button>
-                )}
-             </div>
-             <button 
+            <div className="flex justify-center gap-6">
+              {status === 'recording' && (
+                <button onClick={() => recognitionRef.current?.stop()} className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
+                    <X size={24} />
+                  </div>
+                  <span className="text-xs font-bold uppercase">Stop</span>
+                </button>
+              )}
+              {(status === 'error' || status === 'confirming') && (
+                <button onClick={() => { updateStatus('recording'); startSTT(); }} className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <RotateCcw size={24} />
+                  </div>
+                  <span className="text-xs font-bold uppercase">Retry</span>
+                </button>
+              )}
+            </div>
+            <button
               onClick={closeCompanion}
               className="text-muted-foreground text-sm font-bold uppercase tracking-widest pt-8"
-             >
-               Exit Saathi Mode
-             </button>
+            >
+              Exit Saathi Mode
+            </button>
           </div>
 
           <div className="text-[10px] text-muted-foreground pt-4 border-t border-border">
-             💡 Tip: Speak clearly in Hindi or English
+            💡 Tip: Speak clearly in Hindi or English
           </div>
         </div>
       </motion.div>
