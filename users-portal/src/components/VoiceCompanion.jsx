@@ -99,6 +99,8 @@ const VoiceCompanion = () => {
     });
   };
 
+  const transcriptRef = useRef('');
+
   const startSTT = (isConfirmation = false) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -111,32 +113,39 @@ const VoiceCompanion = () => {
     recognition.continuous = !isConfirmation;
     recognition.interimResults = true;
 
-    let finalTranscript = '';
+    transcriptRef.current = '';
     recognition.onresult = (event) => {
       let interim = '';
+      let final = '';
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
+          final += event.results[i][0].transcript;
         } else {
           interim += event.results[i][0].transcript;
         }
       }
-      setTranscript(finalTranscript + interim);
+      transcriptRef.current += final;
+      setTranscript(transcriptRef.current + interim);
     };
 
     recognition.onend = () => {
-      if (status === 'recording' && !isConfirmation) {
-        if (finalTranscript.trim().length > 0) {
-          handleRecordingComplete(finalTranscript);
-        } else {
-          handleAppError("no_speech");
+      // Small delay to ensure last results are processed
+      setTimeout(() => {
+        if (!isConfirmation) {
+          const text = transcriptRef.current.trim();
+          if (text.length > 0) {
+            handleRecordingComplete(text);
+          } else {
+            // Only show error if we didn't manually stop it for a reason
+            handleAppError("no_speech");
+          }
         }
-      }
+      }, 500);
     };
 
     recognition.onerror = (event) => {
+      console.error('STT Error:', event.error);
       if (event.error === 'network') handleAppError("network");
-      else if (event.error === 'not-allowed') handleAppError("unclear");
     };
 
     recognition.start();
@@ -148,7 +157,9 @@ const VoiceCompanion = () => {
         setCountdown(c => {
           if (c <= 1) {
             clearInterval(timerRef.current);
-            recognition.stop();
+            if (recognitionRef.current) {
+              recognitionRef.current.stop();
+            }
             return 0;
           }
           return c - 1;
