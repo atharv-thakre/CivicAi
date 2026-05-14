@@ -1,6 +1,7 @@
 import { Sidebar, BottomNav, Header } from "./Navigation";
 import { useLocation } from "react-router-dom";
 import { User } from "lucide-react";
+import VoiceCompanion from "./VoiceCompanion";
 
 export const Layout = ({ children, theme, toggleTheme }) => {
   const location = useLocation();
@@ -29,6 +30,7 @@ export const Layout = ({ children, theme, toggleTheme }) => {
 
   return (
     <div className="min-h-screen pb-24 lg:pb-4 transition-colors duration-500">
+      <VoiceCompanion />
       <Sidebar theme={theme} toggleTheme={toggleTheme} />
       <div className="lg:pl-72 flex flex-col min-h-screen">
         <Header theme={theme} toggleTheme={toggleTheme} />
