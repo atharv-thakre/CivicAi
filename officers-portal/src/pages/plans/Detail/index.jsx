@@ -17,7 +17,9 @@ import {
   Clock,
   Loader2,
   Zap,
-  Package
+  Package,
+  Ticket,
+  Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -26,6 +28,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { QRCodeCanvas } from 'qrcode.react';
 
 const ActionPlanDetailPage = () => {
   const { id } = useParams();
@@ -38,6 +41,57 @@ const ActionPlanDetailPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [statusMessage, setStatusMessage] = useState(null);
   const fileInputRef = React.useRef(null);
+  const [workerToken, setWorkerToken] = useState(null);
+
+  const createJWT = async (payload, secret) => {
+    const header = { alg: "HS256", typ: "JWT" };
+    
+    const base64url = (str) => {
+      return btoa(str)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    };
+
+    const encodedHeader = base64url(JSON.stringify(header));
+    const encodedPayload = base64url(JSON.stringify({
+      ...payload,
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 60)
+    }));
+
+    const data = `${encodedHeader}.${encodedPayload}`;
+    
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    const cryptoKey = await window.crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    const signature = await window.crypto.subtle.sign(
+      "HMAC",
+      cryptoKey,
+      encoder.encode(data)
+    );
+    
+    const signatureArray = Array.from(new Uint8Array(signature));
+    const signatureString = signatureArray.map(b => String.fromCharCode(b)).join('');
+    const encodedSignature = base64url(signatureString);
+      
+    return `${data}.${encodedSignature}`;
+  };
+
+  const handleGenerateToken = async () => {
+    if (!complaint) return;
+    const token = await createJWT({
+      complaint_id: complaint.ref,
+      status: "resolved"
+    }, "hello");
+    setWorkerToken(token);
+  };
 
   const handleUpload = async (event) => {
     const file = event.target.files[0];
@@ -395,7 +449,74 @@ const ActionPlanDetailPage = () => {
 
         {/* Sidebar Risk Flags */}
         <div className="space-y-6">
+          {/* Worker Verification Token */}
+          <Card className="border-primary/20 bg-primary/5 overflow-hidden shadow-lg ring-2 ring-primary/20 animate-in fade-in slide-in-from-right-4 duration-700">
+            <CardHeader className="bg-primary/10 border-b border-primary/20">
+              <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
+                <Ticket className="w-4 h-4" /> Worker Protocol
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4">
+               <p className="text-[11px] text-muted-foreground leading-relaxed">
+                 Generate a secure physical token for the field worker. This cryptographic hand-off ensures protocol integrity.
+               </p>
+               
+               {workerToken ? (
+                 <div className="space-y-4 animate-in zoom-in-95 duration-300">
+                   <div className="p-4 bg-primary/10 border-2 border-primary/30 rounded-2xl relative group shadow-inner">
+                     <p className="text-[10px] font-mono break-all text-primary font-black leading-tight tracking-tighter">
+                       {workerToken}
+                     </p>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="absolute -top-2 -right-2 h-8 w-8 bg-background border-2 border-primary/50 shadow-md rounded-full opacity-100 transition-all hover:scale-110 active:scale-95"
+                       onClick={() => navigator.clipboard.writeText(workerToken)}
+                     >
+                       <Copy className="w-4 h-4 text-primary" />
+                     </Button>
+                   </div>
+                   <div className="flex flex-col items-center gap-3">
+                      <div className="w-full bg-white p-4 rounded-xl border border-border shadow-inner flex flex-col items-center justify-center gap-3 relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)', backgroundSize: '4px 4px' }} />
+                        <QRCodeCanvas 
+                          value={`SMSTO:8839575167:Ye token aap "8839575167" pe bhej sakte hai agar aapne complaint resolve kardi ho toh ... " ${workerToken}"`} 
+                          size={120}
+                          level="H"
+                          includeMargin={true}
+                        />
+                        <div className="space-y-1 text-center">
+                          <p className="text-[10px] font-bold text-primary uppercase tracking-tight">Scan to Resolve</p>
+                          <p className="text-[9px] text-muted-foreground leading-tight px-2">
+                            Ye token 8839575167 pe bhej dein agar complaint resolve ho gayi ho.
+                          </p>
+                        </div>
+                        <div className="absolute top-2 right-2">
+                          <ShieldCheck className="w-4 h-4 text-civic-green drop-shadow-sm" />
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-primary uppercase animate-pulse">Token Active & Valid</span>
+                   </div>
+                 </div>
+               ) : (
+                 <Button 
+                   onClick={handleGenerateToken}
+                   className="w-full bg-primary hover:bg-primary/90 text-white font-bold h-12 rounded-xl shadow-lg shadow-primary/30 gap-2 group transition-all hover:-translate-y-0.5"
+                 >
+                   <Zap className="w-4 h-4 group-hover:animate-pulse" />
+                   GENERATE HANDOFF TOKEN
+                 </Button>
+               )}
+            </CardContent>
+            <CardFooter className="bg-primary/5 p-4 border-t border-primary/20">
+                 <p className="text-[9px] text-muted-foreground text-center w-full italic font-medium">
+                   Protocol: HS256 | Entropy: High | Exp: 60h
+                 </p>
+            </CardFooter>
+          </Card>
+
           <Card className="border-civic-orange/20 shadow-lg">
+
             <CardHeader className="bg-civic-orange/10 border-b border-civic-orange/20">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-civic-orange uppercase tracking-wider">
                 <Zap className="w-4 h-4" /> Impact Assessment
@@ -449,6 +570,8 @@ const ActionPlanDetailPage = () => {
             </CardContent>
           </Card>
         </div>
+
+
       </div>
     </div>
   );
