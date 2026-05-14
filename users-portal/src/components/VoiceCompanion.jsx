@@ -93,13 +93,20 @@ const VoiceCompanion = () => {
     }
 
     setIsActive(true);
-    setStatus('recording');
+    updateStatus('recording');
     speak("Namaste! Main Civic AI hoon. Apni shikayat boliye 30 second mein, aur apna address bataye.", () => {
       startSTT();
     });
   };
 
   const transcriptRef = useRef('');
+  const statusRef = useRef('idle');
+
+  // Update status and statusRef together
+  const updateStatus = (newStatus) => {
+    setStatus(newStatus);
+    statusRef.current = newStatus;
+  };
 
   const startSTT = (isConfirmation = false) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -115,28 +122,22 @@ const VoiceCompanion = () => {
 
     transcriptRef.current = '';
     recognition.onresult = (event) => {
-      let interim = '';
-      let final = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          final += event.results[i][0].transcript;
-        } else {
-          interim += event.results[i][0].transcript;
-        }
+      let fullTranscript = '';
+      for (let i = 0; i < event.results.length; ++i) {
+        fullTranscript += event.results[i][0].transcript;
       }
-      transcriptRef.current += final;
-      setTranscript(transcriptRef.current + interim);
+      transcriptRef.current = fullTranscript;
+      setTranscript(fullTranscript);
     };
 
     recognition.onend = () => {
-      // Small delay to ensure last results are processed
+      // Small delay to ensure all onresult events are processed
       setTimeout(() => {
-        if (!isConfirmation) {
+        if (statusRef.current === 'recording' && !isConfirmation) {
           const text = transcriptRef.current.trim();
           if (text.length > 0) {
             handleRecordingComplete(text);
           } else {
-            // Only show error if we didn't manually stop it for a reason
             handleAppError("no_speech");
           }
         }
@@ -146,6 +147,7 @@ const VoiceCompanion = () => {
     recognition.onerror = (event) => {
       console.error('STT Error:', event.error);
       if (event.error === 'network') handleAppError("network");
+      // Other errors like 'no-speech' are handled by our timer/onend
     };
 
     recognition.start();
@@ -158,8 +160,18 @@ const VoiceCompanion = () => {
           if (c <= 1) {
             clearInterval(timerRef.current);
             if (recognitionRef.current) {
-              recognitionRef.current.stop();
+              try {
+                recognitionRef.current.stop();
+              } catch (e) {
+                recognitionRef.current.abort();
+              }
             }
+            // Force end if onend doesn't fire within 2s
+            setTimeout(() => {
+              if (statusRef.current === 'recording') {
+                handleRecordingComplete(transcriptRef.current);
+              }
+            }, 2000);
             return 0;
           }
           return c - 1;
@@ -170,7 +182,7 @@ const VoiceCompanion = () => {
 
   const handleRecordingComplete = (text) => {
     clearInterval(timerRef.current);
-    setStatus('confirming');
+    updateStatus('confirming');
     speak(`Shukriya! Aapki shikayat record ho gayi. Aapne kaha: ${text}. Sahi hai? Haan boliye ya Nahin.`, () => {
       listenForConfirmation(text);
     });
@@ -187,7 +199,7 @@ const VoiceCompanion = () => {
         submitComplaint(originalText);
       } else if (result.includes('nahin') || result.includes('no') || result.includes('galat') || result.includes('nahi')) {
         speak("Theek hai. Dobara boliye.", () => {
-          setStatus('recording');
+          updateStatus('recording');
           startSTT();
         });
       }
@@ -197,7 +209,7 @@ const VoiceCompanion = () => {
   };
 
   const submitComplaint = async (text) => {
-    setStatus('processing');
+    updateStatus('processing');
     try {
       const location = await getGeolocation();
       const response = await fetch(`${API_BASE_URL}/ai/post`, {
@@ -220,7 +232,7 @@ const VoiceCompanion = () => {
       if (!response.ok) throw new Error('API_ERROR');
       const data = await response.json();
       setComplaintId(data.complaint_id || `GR-${Math.floor(10000 + Math.random() * 90000)}`);
-      setStatus('success');
+      updateStatus('success');
       speak(`Aapki shikayat darj ho gayi. Shukriya!`);
       
       setTimeout(() => closeCompanion(), 5000);
@@ -231,7 +243,7 @@ const VoiceCompanion = () => {
 
   const handleAppError = (type) => {
     setErrorType(type);
-    setStatus('error');
+    updateStatus('error');
     clearInterval(timerRef.current);
     
     const messages = {
@@ -251,7 +263,7 @@ const VoiceCompanion = () => {
     if (wakeLockRef.current) wakeLockRef.current.release();
     clearInterval(timerRef.current);
     setIsActive(false);
-    setStatus('idle');
+    updateStatus('idle');
     setTranscript('');
     setComplaintId(null);
     setErrorType(null);
@@ -361,7 +373,7 @@ const VoiceCompanion = () => {
                   </button>
                 )}
                 {(status === 'error' || status === 'confirming') && (
-                  <button onClick={() => { setStatus('recording'); startSTT(); }} className="flex flex-col items-center gap-2">
+                  <button onClick={() => { updateStatus('recording'); startSTT(); }} className="flex flex-col items-center gap-2">
                     <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
                       <RotateCcw size={24} />
                     </div>
