@@ -41,8 +41,8 @@ export const Layout = ({ children, theme, toggleTheme }) => {
           </button>
         </header>
 
-        <main className="flex-1 p-6 lg:p-10">
-          <div className="max-w-7xl mx-auto w-full">{children}</div>
+        <main className="flex-1 p-6 lg:p-6">
+          <div className="w-full h-full">{children}</div>
         </main>
       </div>
       <BottomNav theme={theme} toggleTheme={toggleTheme} />

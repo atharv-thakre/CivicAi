@@ -12,9 +12,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
   User,
-  AlertTriangle,
   Moon,
   Sun
 } from 'lucide-react';
@@ -126,7 +124,7 @@ export const Layout = ({ children }) => {
     fetchUser();
   }, [dispatch, state.user]);
 
-  const user = state.user || { name: 'Loading...', id: 'OFF-0000' };
+  const user = state.user || { name: 'Loading...', uid: 'OFF-0000' };
 
 
   return (
@@ -208,10 +206,16 @@ export const Layout = ({ children }) => {
             <div className="pt-4 mt-4 border-t border-border/50">
               <SidebarItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
               <button 
-                onClick={() => navigate('/login')}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-muted-foreground hover:bg-civic-red/10 hover:text-civic-red transition-all mt-1"
+                onClick={() => {
+                  localStorage.removeItem('access_token');
+                  localStorage.removeItem('user_id');
+                  localStorage.removeItem('user_role');
+                  localStorage.removeItem('user_uid');
+                  navigate('/login');
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-muted-foreground hover:bg-civic-red/10 hover:text-civic-red transition-all mt-1 group"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
                 {!collapsed && <span className="font-medium">Logout</span>}
               </button>
             </div>

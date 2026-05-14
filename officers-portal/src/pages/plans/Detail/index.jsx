@@ -34,7 +34,9 @@ const ActionPlanDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [statusMessage, setStatusMessage] = useState(null);
   const fileInputRef = React.useRef(null);
 
   const handleUpload = async (event) => {
@@ -42,7 +44,8 @@ const ActionPlanDetailPage = () => {
     if (!file) return;
 
     setUploading(true);
-    const token = localStorage.getItem('token');
+    setUploadSuccess(false);
+    setStatusMessage(null);
     const formData = new FormData();
     formData.append("complaint_id", String(complaint.ref));
     formData.append("label", "after");
@@ -59,9 +62,10 @@ const ActionPlanDetailPage = () => {
         throw new Error(errorData.detail || 'Ledger Rejected Evidence');
       }
 
-      alert('Evidence successfully committed to the Civic Ledger.');
+      setUploadSuccess(true);
+      setStatusMessage({ type: 'success', text: 'Evidence successfully committed to the Civic Ledger.' });
     } catch (err) {
-      alert(`Protocol Error: ${err.message}`);
+      setStatusMessage({ type: 'error', text: `Protocol Error: ${err.message}` });
     } finally {
       setUploading(false);
     }
@@ -257,9 +261,10 @@ const ActionPlanDetailPage = () => {
                   {/* Upload Evidence — only on the last step */}
                   {currentStep === steps.length && (
                     <div 
-                      onClick={() => !uploading && fileInputRef.current?.click()}
+                      onClick={() => !uploading && !uploadSuccess && fileInputRef.current?.click()}
                       className={cn(
-                        "p-4 rounded-2xl bg-secondary/30 border border-dashed border-border flex flex-col items-center justify-center gap-2 group cursor-pointer hover:border-primary/50 transition-all relative overflow-hidden",
+                        "p-4 rounded-2xl bg-secondary/30 border border-dashed flex flex-col items-center justify-center gap-2 group cursor-pointer hover:border-primary/50 transition-all relative overflow-hidden",
+                        uploadSuccess ? "border-civic-green/50 bg-civic-green/5" : "border-border",
                         uploading && "opacity-50 cursor-not-allowed"
                       )}
                     >
@@ -272,13 +277,30 @@ const ActionPlanDetailPage = () => {
                       />
                       {uploading ? (
                         <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                      ) : uploadSuccess ? (
+                        <CheckCircle2 className="w-6 h-6 text-civic-green" />
                       ) : (
                         <Camera className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                       )}
-                      <span className="text-xs font-bold text-muted-foreground group-hover:text-foreground uppercase tracking-wider">
-                        {uploading ? 'COMMITTING...' : 'Upload Evidence'}
+                      <span className={cn(
+                        "text-xs font-bold uppercase tracking-wider",
+                        uploadSuccess ? "text-civic-green" : "text-muted-foreground group-hover:text-foreground"
+                      )}>
+                        {uploading ? 'COMMITTING...' : uploadSuccess ? 'EVIDENCE VERIFIED' : 'Upload Evidence'}
                       </span>
-                      <span className="text-[10px] text-civic-orange">(REQUIRED: GEO-TAGGED)</span>
+                      {!uploadSuccess && <span className="text-[10px] text-civic-orange">(REQUIRED: GEO-TAGGED)</span>}
+                      {statusMessage && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={cn(
+                            "text-[10px] font-bold mt-1",
+                            statusMessage.type === 'success' ? "text-civic-green" : "text-civic-red"
+                          )}
+                        >
+                          {statusMessage.text}
+                        </motion.div>
+                      )}
                     </div>
                   )}
                 </div>

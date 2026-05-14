@@ -7,6 +7,13 @@
   /* Vision UI / Adaptive Palette */
   --color-vision-accent: #3b82f6;
   --color-vision-slate-400: #94a3b8;
+
+  /* Civic Colors */
+  --color-civic-cyan: #007aff;
+  --color-civic-green: #34c759;
+  --color-civic-red: #ff3b30;
+  --color-civic-orange: #ff9500;
+  --color-civic-purple: #5856d6;
 }
 
 @layer base {
@@ -46,6 +53,9 @@
     @apply backdrop-blur-xl bg-[var(--glass)] border border-[var(--border)];
   }
 
+.ios-glass {
+  @apply bg-white/10 backdrop-blur-xl border border-white/20;
+}
   .leaflet-container {
     width: 100%;
     height: 100%;

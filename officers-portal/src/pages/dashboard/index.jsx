@@ -14,7 +14,9 @@ import {
   Flame,
   ShieldCheck,
   BrainCircuit,
-  Loader2
+  Loader2,
+  Zap,
+  ClipboardList
 } from 'lucide-react';
 import { 
   Card, 
@@ -38,7 +40,6 @@ import { mockComplaint, mockExpertise } from '@/mockData';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 
-// Helper for Stat Card
 const StatCard = ({ label, value, subtext, color, icon: Icon, i }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -46,14 +47,14 @@ const StatCard = ({ label, value, subtext, color, icon: Icon, i }) => (
     transition={{ delay: i * 0.1 }}
     className="flex-1"
   >
-    <Card className="border-border bg-card stat-card h-full">
+    <Card className="border-border bg-card stat-card h-full group hover:shadow-md transition-all duration-300">
       <CardContent className="p-4 flex flex-col gap-1">
         <div className={cn("text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5", 
            color === 'red' ? 'text-civic-red' : 
            color === 'orange' ? 'text-civic-orange' : 
            color === 'green' ? 'text-civic-green' : 'text-civic-cyan'
         )}>
-          {color === 'red' ? '🔴' : color === 'orange' ? '🟡' : color === 'green' ? '🟢' : '⏱️'} {label}
+          <Icon className="w-4 h-4" /> {label}
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-bold">{value}</span>
@@ -178,12 +179,12 @@ const Dashboard = () => {
               <div className="flex gap-3">
                 <Button 
                   onClick={() => navigate(`/plans/${latestUrgent.ref}`)}
-                  className="bg-primary text-primary-foreground font-bold px-6 h-11 hover:brightness-110 rounded-full"
+                  className="bg-primary text-primary-foreground font-bold px-6 h-11 hover:brightness-110 rounded-full gap-2"
                 >
-                  🚀 START RESOLUTION
+                  <Zap className="w-4 h-4" /> START RESOLUTION
                 </Button>
-                <Button variant="outline" className="border-border bg-transparent text-foreground font-bold px-6 h-11 hover:bg-secondary/50 rounded-full">
-                  📋 VIEW PLAYBOOK
+                <Button variant="outline" className="border-border bg-transparent text-foreground font-bold px-6 h-11 hover:bg-secondary/50 rounded-full gap-2">
+                  <ClipboardList className="w-4 h-4" /> VIEW PLAYBOOK
                 </Button>
               </div>
             </CardContent>

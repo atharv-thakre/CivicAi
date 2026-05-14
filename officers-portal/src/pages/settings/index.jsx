@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Settings, Shield, Bell, User, Eye, Lock, Database, Globe } from 'lucide-react';
+import { Settings, Shield, Bell, User, Eye, Lock, Database, Globe, ToggleLeft } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import { useTheme } from '@/context/ThemeContext';
 
 const SettingsPage = () => {
@@ -61,8 +63,12 @@ const SettingsPage = () => {
                   <p className="font-bold">Motion Effects</p>
                   <p className="text-sm text-muted-foreground">Enable hardware-accelerated animations</p>
                 </div>
-                <div className="w-12 h-6 bg-civic-cyan rounded-full p-1 flex items-center justify-end">
-                   <div className="w-4 h-4 bg-white rounded-full" />
+                <div className="w-12 h-6 bg-primary/30 rounded-full p-1 flex items-center relative cursor-pointer transition-colors hover:bg-primary/40">
+                   <motion.div 
+                     layout
+                     className="w-4 h-4 bg-primary rounded-full shadow-md"
+                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                   />
                 </div>
               </div>
             </CardContent>
@@ -100,9 +106,5 @@ const SettingsPage = () => {
     </div>
   );
 };
-
-// Internal cn helper if not imported
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 
 export default SettingsPage;

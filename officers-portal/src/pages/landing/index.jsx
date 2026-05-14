@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Shield, ArrowRight, Zap, Database, BarChart3, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 import CardNav from '@/components/CardNav';
 
@@ -143,16 +144,16 @@ const LandingPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: Globe, title: "Lidar Mapping", desc: "Real-time infrastructure scanning via edge networks.", color: "primary" },
-              { icon: Zap, title: "DSS Engine", desc: "AI-driven decision support for critical municipal events.", color: "civic-green" },
-              { icon: BarChart3, title: "KPI Tracker", desc: "Deep analytics for officer performance and caseloads.", color: "civic-purple" }
+              { icon: Globe, title: "Lidar Mapping", desc: "Real-time infrastructure scanning via edge networks.", color: "primary", bg: "bg-primary/10", text: "text-primary" },
+              { icon: Zap, title: "DSS Engine", desc: "AI-driven decision support for critical municipal events.", color: "civic-green", bg: "bg-civic-green/10", text: "text-civic-green" },
+              { icon: BarChart3, title: "KPI Tracker", desc: "Deep analytics for officer performance and caseloads.", color: "civic-purple", bg: "bg-civic-purple/10", text: "text-civic-purple" }
             ].map((f, i) => (
               <motion.div 
                 key={i}
                 whileHover={{ y: -10 }}
                 className="ios-glass p-10 rounded-[40px] border border-border/50 space-y-6 group cursor-pointer"
               >
-                <div className={`w-16 h-16 rounded-2xl bg-${f.color}/10 flex items-center justify-center text-${f.color} group-hover:scale-110 transition-transform`}>
+                <div className={cn(f.bg, f.text, "w-16 h-16 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform")}>
                   <f.icon className="w-8 h-8" />
                 </div>
                 <h3 className="text-2xl font-bold">{f.title}</h3>
