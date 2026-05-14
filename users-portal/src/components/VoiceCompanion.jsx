@@ -95,9 +95,11 @@ const VoiceCompanion = () => {
     setIsActive(true);
     updateStatus('recording');
     transcriptRef.current = '';
-    speak("Namaste! Main Civic AI hoon. Apni shikayat boliye 30 second mein, aur apna address bataye.", () => {
-      startSTT();
-    });
+    
+    // Start listening immediately
+    startSTT();
+
+    speak("Namaste! Main Civic AI hoon. Apni shikayat boliye 30 second mein, aur apna address bataye.");
   };
 
   const transcriptRef = useRef('');
@@ -206,10 +208,10 @@ const VoiceCompanion = () => {
       listenForConfirmation(text);
     };
 
+    // Open mic immediately while AI is speaking
+    startConfirming();
+
     speak(`Shukriya! Aapki shikayat record ho gayi. Aapne kaha: ${text}. Sahi hai? Haan boliye ya Nahin.`, startConfirming);
-    
-    // Safety fallback: ensure we start listening even if TTS onend fails
-    setTimeout(startConfirming, 12000);
   };
 
   const listenForConfirmation = (originalText) => {
