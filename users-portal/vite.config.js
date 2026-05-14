@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
+
   return {
     plugins: [
       react(),
@@ -64,16 +65,22 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
+
     define: {
       "process.env.GEMINI_API_KEY": JSON.stringify(env.GEMINI_API_KEY),
     },
+
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "."),
       },
     },
+
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
+      host: "0.0.0.0",
+      allowedHosts: [
+        "codesena.totalchaos.online",
+      ],
       hmr: process.env.DISABLE_HMR !== "true",
     },
   };
