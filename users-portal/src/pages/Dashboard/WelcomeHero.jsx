@@ -20,7 +20,7 @@ export default function WelcomeHero() {
           </div>
           <div className="relative z-10 p-8 md:p-12 max-w-2xl">
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-vision-slate-400 mb-2">Welcome back,</p>
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight uppercase mb-4">Marcus Holloway</h2>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight uppercase mb-4">Arjun Singh</h2>
             <p className="text-base text-slate-500 dark:text-vision-slate-400 leading-relaxed mb-8 max-w-md">
               Glad to see you again! Your area reporting activity is up by 15% this month. Keep up the great work helping our community.
             </p>

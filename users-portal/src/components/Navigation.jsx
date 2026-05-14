@@ -72,7 +72,7 @@ export const Sidebar = ({ theme, toggleTheme }) => {
             <p className="text-[10px] font-bold uppercase tracking-widest text-vision-slate-400 mb-1">
               Citizen
             </p>
-            <p className="text-sm font-bold truncate">Marcus Holloway</p>
+            <p className="text-sm font-bold truncate">Arjun Singh</p>
             <p className="text-[10px] text-vision-accent font-bold">
               Verified • District 7
             </p>

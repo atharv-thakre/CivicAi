@@ -68,7 +68,11 @@ const VoiceCompanion = () => {
           lastShakeTimeRef.current = now;
 
           if (shakeCountRef.current >= 3) {
-            activateCompanion();
+            if (statusRef.current === 'confirming') {
+              submitComplaint(transcriptRef.current);
+            } else if (statusRef.current === 'idle' || statusRef.current === 'error') {
+              activateCompanion();
+            }
             shakeCountRef.current = 0;
           }
         }
@@ -211,7 +215,7 @@ const VoiceCompanion = () => {
     // Open mic immediately while AI is speaking
     startConfirming();
 
-    speak(`Shukriya! Aapki shikayat record ho gayi. Aapne kaha: ${text}. Sahi hai? Haan boliye ya Nahin.`, startConfirming);
+    speak(`Shukriya! Aapki shikayat record ho gayi. Aapne kaha: ${text}. Sahi hai? Complaint submit karne ke liye phone ko hilaayein.`);
   };
 
   const listenForConfirmation = (originalText) => {
@@ -250,8 +254,8 @@ const VoiceCompanion = () => {
     };
 
     try {
-      recognition.start();
-      recognitionRef.current = recognition;
+      // recognition.start(); // No longer needed as we use shake to confirm
+      // recognitionRef.current = recognition;
     } catch (e) {
       console.error("Failed to start confirmation STT:", e);
     }
@@ -265,16 +269,12 @@ const VoiceCompanion = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'msg': text
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjgiLCJ1aWQiOiI4ZjNmN2M2OC1mZjIwLTQ1OTctYTVmMC1kNGVkMGNkNTQwMzciLCJyb2xlIjoidXNlciIsImV4cCI6MTc3ODk1NzY4MH0.GuvVAWZG3o4zimCkagS9e1mNEsan-cqg837Nm-WbW7k`
+
         },
         body: JSON.stringify({
-          complaint_text: text,
-          source: 'voice_companion',
-          language_detected: 'hi-IN',
-          timestamp: new Date().toISOString(),
-          location: location,
-          shake_triggered: true,
-          session_duration_ms: 30000
+          message: text,
+          complaint_id:100
         })
       });
 
@@ -378,7 +378,7 @@ const VoiceCompanion = () => {
                 <p className="text-sm text-muted-foreground uppercase font-bold tracking-widest">Verify Complaint</p>
                 <p className="text-xl font-medium leading-relaxed italic">"{transcript}"</p>
                 <div className="flex justify-center gap-4 pt-4">
-                  <div className="px-6 py-2 rounded-full bg-primary/10 text-primary font-bold">Boliye "Haan" / "Nahin"</div>
+                  <div className="px-6 py-2 rounded-full bg-primary/10 text-primary font-bold animate-bounce">Shake Phone to Submit</div>
                 </div>
               </div>
             )}
