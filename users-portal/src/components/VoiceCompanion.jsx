@@ -198,18 +198,32 @@ const VoiceCompanion = () => {
   const handleRecordingComplete = (text) => {
     clearInterval(timerRef.current);
     updateStatus('confirming');
-    speak(`Shukriya! Aapki shikayat record ho gayi. Aapne kaha: ${text}. Sahi hai? Haan boliye ya Nahin.`, () => {
+    
+    let hasStartedConfirmation = false;
+    const startConfirming = () => {
+      if (hasStartedConfirmation) return;
+      hasStartedConfirmation = true;
       listenForConfirmation(text);
-    });
+    };
+
+    speak(`Shukriya! Aapki shikayat record ho gayi. Aapne kaha: ${text}. Sahi hai? Haan boliye ya Nahin.`, startConfirming);
+    
+    // Safety fallback: ensure we start listening even if TTS onend fails
+    setTimeout(startConfirming, 12000);
   };
 
   const listenForConfirmation = (originalText) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
     const recognition = new SpeechRecognition();
     recognition.lang = 'hi-IN';
+    recognition.continuous = false;
+    recognition.interimResults = false;
 
     recognition.onresult = (event) => {
       const result = event.results[0][0].transcript.toLowerCase();
+      console.log("Confirmation result:", result);
       if (result.includes('haan') || result.includes('yes') || result.includes('sahi') || result.includes('han') || result.includes('yeah')) {
         submitComplaint(originalText);
       } else if (result.includes('nahin') || result.includes('no') || result.includes('galat') || result.includes('nahi') || result.includes('nope')) {
@@ -221,7 +235,24 @@ const VoiceCompanion = () => {
       }
     };
 
-    recognition.start();
+    recognition.onerror = (err) => {
+      console.error("Confirmation STT error:", err.error);
+      if (statusRef.current === 'confirming') {
+        // If error occurs, we might want to restart after a small delay
+        setTimeout(() => {
+          if (statusRef.current === 'confirming') {
+            try { recognition.start(); } catch(e) {}
+          }
+        }, 1000);
+      }
+    };
+
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (e) {
+      console.error("Failed to start confirmation STT:", e);
+    }
   };
 
   const submitComplaint = async (text) => {
