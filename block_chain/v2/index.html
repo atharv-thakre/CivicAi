@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AUDIT REGISTRY</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red: #FF2D20;
+      --black: #0A0A0A;
+      --white: #F8F4EF;
+      --white-dim: #D9D4CE;
+      --white-faint: #9A948E;
+      --green: #00C853;
+      --amber: #FF9800;
+      --display: 'Bebas Neue', Impact, sans-serif;
+      --mono: 'DM Mono', monospace;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      font-family: var(--mono);
+      background: var(--white);
+      color: var(--black);
+      min-height: 100vh;
+      cursor: crosshair;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── TICKER STRIP ── */
+    .ticker {
+      background: var(--red);
+      color: var(--white);
+      height: 32px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .ticker-track {
+      display: flex;
+      gap: 0;
+      animation: tickerScroll 22s linear infinite;
+      white-space: nowrap;
+    }
+
+    .ticker-item {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 0 32px;
+      border-right: 1px solid rgba(248,244,239,0.25);
+    }
+
+    @keyframes tickerScroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--black);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: stretch;
+      border-bottom: 6px solid var(--red);
+    }
+
+    .header-left {
+      padding: 28px 40px 24px;
+      border-right: 1px solid rgba(248,244,239,0.08);
+    }
+
+    .logo {
+      font-family: var(--display);
+      font-size: 88px;
+      line-height: 0.88;
+      color: var(--white);
+      letter-spacing: 0.01em;
+    }
+
+    .logo span {
+      color: var(--red);
+    }
+
+    .logo-sub {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 300;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--white-faint);
+      margin-top: 12px;
+    }
+
+    .header-right {
+      padding: 28px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-width: 260px;
+    }
+
+    .connect-btn {
+      font-family: var(--display);
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      background: var(--red);
+      color: var(--white);
+      border: none;
+      padding: 14px 28px;
+      cursor: crosshair;
+      transition: background 0.15s, transform 0.1s;
+      display: block;
+      width: 100%;
+      text-align: center;
+    }
+
+    .connect-btn:hover { background: #e0251a; }
+    .connect-btn:active { transform: scale(0.98); }
+    .connect-btn.connected { background: transparent; border: 2px solid var(--green); color: var(--green); font-size: 14px; font-family: var(--mono); font-weight: 400; letter-spacing: 0.06em; padding: 12px 20px; }
+
+    .header-meta {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 300;
+      letter-spacing: 0.14em;
+      color: var(--white-faint);
+      text-transform: uppercase;
+      line-height: 1.9;
+    }
+
+    .meta-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--white-faint);
+      margin-right: 7px;
+      vertical-align: 1px;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .meta-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s ease infinite; }
+    .meta-dot.err { background: var(--red); box-shadow: 0 0 6px var(--red); }
+    .meta-dot.pending { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: pulse 0.5s step-end infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── MAIN GRID ── */
+    main { display: grid; grid-template-columns: 1fr 1fr; }
+
+    /* ── HERO STORE PANEL ── */
+    .panel-hero {
+      background: var(--red);
+      padding: 48px 44px 52px;
+      border-right: 6px solid var(--black);
+      position: relative;
+      overflow: hidden;
+      min-height: 540px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* diagonal stripe watermark */
+    .panel-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 18px,
+        rgba(0,0,0,0.06) 18px,
+        rgba(0,0,0,0.06) 20px
+      );
+      pointer-events: none;
+    }
+
+    .panel-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: rgba(248,244,239,0.55);
+      margin-bottom: 12px;
+    }
+
+    .panel-title {
+      font-family: var(--display);
+      font-size: 72px;
+      line-height: 0.9;
+      color: var(--white);
+      letter-spacing: 0.02em;
+      margin-bottom: 36px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── FIELDS ── */
+    .field { margin-bottom: 20px; position: relative; z-index: 1; }
+
+    .field-label {
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: rgba(248,244,239,0.55);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .field-input {
+      width: 100%;
+      background: rgba(0,0,0,0.35);
+      border: none;
+      border-bottom: 2px solid rgba(248,244,239,0.4);
+      padding: 12px 14px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      font-weight: 300;
+      color: var(--white);
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      letter-spacing: 0.03em;
+    }
+    .field-input::placeholder { color: rgba(248,244,239,0.25); }
+    .field-input:focus {
+      border-bottom-color: var(--white);
+      background: rgba(0,0,0,0.5);
+    }
+
+    /* ── HERO BUTTON ── */
+    .btn-hero {
+      font-family: var(--display);
+      font-size: 28px;
+      letter-spacing: 0.06em;
+      background: var(--black);
+      color: var(--white);
+      border: none;
+      padding: 18px 32px;
+      cursor: crosshair;
+      transition: background 0.15s, letter-spacing 0.2s;
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+    }
+
+    .btn-hero::after {
+      content: '→';
+      font-family: var(--mono);
+      font-size: 20px;
+      transition: transform 0.2s;
+    }
+
+    .btn-hero:hover { background: #1a1a1a; letter-spacing: 0.1em; }
+    .btn-hero:hover::after { transform: translateX(6px); }
+    .btn-hero:active { transform: scale(0.99); }
+    .btn-hero:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-hero.loading { pointer-events: none; }
+    .btn-hero.loading::after { content: ''; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    .btn-hero.success { background: var(--green); color: var(--black); }
+    .btn-hero.success::after { content: '✓'; font-family: var(--mono); font-size: 20px; transform: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RIGHT COLUMN ── */
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── RESULT ── */
+    .result-strip {
+      background: var(--black);
+      color: var(--white);
+      padding: 20px 28px;
+      border-bottom: 2px solid var(--red);
+      display: none;
+      animation: slideDown 0.3s ease;
+    }
+    .result-strip.show { display: block; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .result-title {
+      font-family: var(--display);
+      font-size: 16px;
+      letter-spacing: 0.1em;
+      color: var(--red);
+      margin-bottom: 12px;
+    }
+
+    .rrow {
+      display: flex; gap: 0;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(248,244,239,0.06);
+      align-items: baseline;
+    }
+    .rrow:last-child { border-bottom: none; }
+    .r-key { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--white-faint); min-width: 88px; flex-shrink: 0; padding-top: 1px; }
+    .r-val { font-size: 11px; font-weight: 300; color: var(--white); word-break: break-all; flex: 1; }
+    .r-val.ok { color: var(--green); }
+    .r-val.err { color: var(--red); }
+    .r-val.dim { color: var(--white-dim); }
+
+    .ethlink { color: var(--white-dim); font-size: 11px; font-family: var(--mono); font-weight: 300; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255,255,255,0.2); transition: color 0.15s; }
+    .ethlink:hover { color: var(--white); }
+
+    /* ── SECONDARY PANELS ── */
+    .panel-secondary {
+      border-bottom: 4px solid var(--black);
+      padding: 36px 40px 40px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-secondary:last-child { border-bottom: none; }
+
+    .sec-label {
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--white-faint);
+      margin-bottom: 8px;
+    }
+
+    .sec-title {
+      font-family: var(--display);
+      font-size: 44px;
+      line-height: 0.92;
+      color: var(--black);
+      letter-spacing: 0.02em;
+      margin-bottom: 24px;
+    }
+
+    .field-sm { margin-bottom: 16px; }
+
+    .field-label-sm {
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--white-faint);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .field-input-sm {
+      width: 100%;
+      background: var(--black);
+      border: none;
+      border-bottom: 2px solid rgba(10,10,10,0.2);
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--white);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field-input-sm::placeholder { color: rgba(248,244,239,0.2); }
+    .field-input-sm:focus { border-bottom-color: var(--red); }
+
+    .btn-sm {
+      font-family: var(--display);
+      font-size: 20px;
+      letter-spacing: 0.06em;
+      background: transparent;
+      border: 2px solid var(--black);
+      color: var(--black);
+      padding: 11px 20px;
+      cursor: crosshair;
+      transition: background 0.15s, color 0.15s;
+      width: 100%;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+    }
+
+    .btn-sm::after { content: '→'; font-family: var(--mono); font-size: 16px; transition: transform 0.2s; }
+    .btn-sm:hover { background: var(--black); color: var(--white); }
+    .btn-sm:hover::after { transform: translateX(4px); }
+
+    .sec-result {
+      background: #111;
+      color: var(--white);
+      padding: 14px 16px;
+      margin-top: 12px;
+      display: none;
+      animation: slideDown 0.25s ease;
+    }
+    .sec-result.show { display: block; }
+
+    /* ── ZEBRA STRIPE FOOTER ── */
+    footer {
+      background: var(--black);
+      border-top: 6px solid var(--red);
+      display: flex;
+      align-items: center;
+      height: 44px;
+      padding: 0 40px;
+      gap: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    footer::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: repeating-linear-gradient(90deg, var(--red) 0, var(--red) 20px, var(--black) 20px, var(--black) 40px);
+    }
+
+    #statusText {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 300;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--white-faint);
+      flex: 1;
+    }
+    #statusText.ok { color: var(--green); }
+    #statusText.err { color: var(--red); }
+    #statusText.pending { color: var(--amber); }
+
+    .footer-contract {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      color: rgba(248,244,239,0.2);
+    }
+
+    /* ── FADE IN ── */
+    .fi { opacity: 0; animation: fadeUp 0.5s ease forwards; }
+    .fi:nth-child(1) { animation-delay: 0.05s; }
+    .fi:nth-child(2) { animation-delay: 0.12s; }
+    .fi:nth-child(3) { animation-delay: 0.18s; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 820px) {
+      main { grid-template-columns: 1fr; }
+      .panel-hero { border-right: none; border-bottom: 6px solid var(--black); min-height: auto; }
+      .panel-title { font-size: 52px; }
+      .logo { font-size: 56px; }
+      header { grid-template-columns: 1fr; }
+      .header-right { border-top: 1px solid rgba(255,255,255,0.08); padding: 20px 40px; flex-direction: row; align-items: center; gap: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track" id="ticker">
+    <span class="ticker-item">Audit Registry</span>
+    <span class="ticker-item">Sepolia Testnet</span>
+    <span class="ticker-item">0xDA2F1f358244D6F80e0eB60aF0823AE6577BD138</span>
+    <span class="ticker-item">On-chain record protocol</span>
+    <span class="ticker-item">Tamper-proof · Timestamped · Immutable</span>
+    <span class="ticker-item">Audit Registry</span>
+    <span class="ticker-item">Sepolia Testnet</span>
+    <span class="ticker-item">0xDA2F1f358244D6F80e0eB60aF0823AE6577BD138</span>
+    <span class="ticker-item">On-chain record protocol</span>
+    <span class="ticker-item">Tamper-proof · Timestamped · Immutable</span>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="fi">
+  <div class="header-left">
+    <div class="logo">AUDIT<br><span>CHAIN</span></div>
+    <div class="logo-sub">Immutable On-Chain Record Protocol</div>
+  </div>
+  <div class="header-right">
+    <div class="header-meta">
+      <div><span class="meta-dot" id="navDot"></span>Network: Sepolia</div>
+      <div id="statusLine">Status: Not connected</div>
+      <div>Contract: 0xDA2F…BD138</div>
+    </div>
+    <button class="connect-btn" id="connectBtn" onclick="handleConnect()">CONNECT WALLET</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="fi">
+
+  <!-- LEFT: STORE RECORD -->
+  <div class="panel-hero">
+    <div class="panel-label">01 — Write</div>
+    <div class="panel-title">STORE<br>NOW</div>
+
+    <div class="field">
+      <label class="field-label">Data Hash (bytes32)</label>
+      <input class="field-input" id="data" type="text"
+        placeholder="0x0000000000000000000000000000000000000000000000000000000000000000"
+        autocomplete="off" spellcheck="false" />
+    </div>
+
+    <div class="field">
+      <label class="field-label">Commit ID</label>
+      <input class="field-input" id="commit" type="text"
+        placeholder="e.g. a3f9c81d or v2.4.1"
+        autocomplete="off" spellcheck="false" />
+    </div>
+
+    <div class="result-strip" id="storeResult"></div>
+
+    <button class="btn-hero" id="storeBtn" onclick="handleStore()">
+      <span id="storeBtnText">INSCRIBE TO CHAIN</span>
+    </button>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="panel-right">
+
+    <!-- FETCH RECORD -->
+    <div class="panel-secondary">
+      <div class="sec-label">02 — Read</div>
+      <div class="sec-title">FETCH<br>RECORD</div>
+
+      <div class="field-sm">
+        <label class="field-label-sm">Record ID</label>
+        <input class="field-input-sm" id="recordId" type="number" placeholder="0" min="0" />
+      </div>
+
+      <div class="sec-result" id="getResult"></div>
+      <button class="btn-sm" onclick="handleGet()"><span>RETRIEVE</span></button>
+    </div>
+
+    <!-- SEARCH BY COMMIT -->
+    <div class="panel-secondary">
+      <div class="sec-label">03 — Search</div>
+      <div class="sec-title">FIND BY<br>COMMIT</div>
+
+      <div class="field-sm">
+        <label class="field-label-sm">Commit ID</label>
+        <input class="field-input-sm" id="searchCommit" type="text"
+          placeholder="Enter commit ID…" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="sec-result" id="searchResult"></div>
+      <button class="btn-sm" onclick="handleSearch()"><span>SEARCH CHAIN</span></button>
+    </div>
+
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="fi">
+  <span class="meta-dot" id="footerDot"></span>
+  <span id="statusText">Not connected — connect wallet to begin</span>
+  <span class="footer-contract">Sepolia · 0xDA2F1f358244D6F80e0eB60aF0823AE6577BD138</span>
+</footer>
+
+<script src="chain.js"></script>
+<script>
+  /* ── STATUS OVERRIDE ── */
+  window.setStatus = function (msg, isError = false) {
+    const txt  = document.getElementById('statusText');
+    const dots = [document.getElementById('navDot'), document.getElementById('footerDot')];
+    const line = document.getElementById('statusLine');
+
+    const isPending = /⏳|📤|Sending|TX Sent/.test(msg);
+    const cls = isError ? 'err' : isPending ? 'pending' : 'ok';
+
+    txt.textContent = msg;
+    txt.className = cls;
+    dots.forEach(d => d.className = 'meta-dot ' + cls);
+    if (line) line.textContent = 'Status: ' + (isError ? 'Error' : isPending ? 'Broadcasting…' : 'Connected');
+  };
+
+  /* ── HELPERS ── */
+  function rr(key, val, cls = '') {
+    return `<div class="rrow"><span class="r-key">${key}</span><span class="r-val ${cls}">${val}</span></div>`;
+  }
+  function srr(key, val) {
+    return `<div class="rrow"><span class="r-key">${key}</span><span class="r-val dim">${val}</span></div>`;
+  }
+  function showHero(html, ok = true) {
+    const el = document.getElementById('storeResult');
+    el.className = 'result-strip show';
+    el.innerHTML = `<div class="result-title">${ok ? 'CONFIRMED' : 'ERROR'}</div>` + html;
+  }
+  function showSec(id, html) {
+    const el = document.getElementById(id);
+    el.className = 'sec-result show';
+    el.innerHTML = html;
+  }
+  function sAddr(a) { return a.slice(0, 10) + '…' + a.slice(-8); }
+  function fmtTs(ts) { return new Date(Number(ts) * 1000).toLocaleString(); }
+
+  /* ── CONNECT ── */
+  async function handleConnect() {
+    const btn = document.getElementById('connectBtn');
+    btn.textContent = 'CONNECTING…';
+    const acc = await connectWallet();
+    if (acc) {
+      btn.textContent = acc.slice(0, 8) + '…' + acc.slice(-6);
+      btn.classList.add('connected');
+    } else {
+      btn.textContent = 'CONNECT WALLET';
+    }
+  }
+
+  /* ── STORE ── */
+  async function handleStore() {
+    const btn  = document.getElementById('storeBtn');
+    const span = document.getElementById('storeBtnText');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    const hash   = document.getElementById('data').value.trim();
+    const commit = document.getElementById('commit').value.trim();
+    const txHash = await storeRecord(hash, commit);
+
+    btn.classList.remove('loading'); btn.disabled = false;
+
+    if (txHash) {
+      btn.classList.add('success');
+      span.textContent = 'INSCRIBED';
+      setTimeout(() => {
+        btn.classList.remove('success');
+        span.textContent = 'INSCRIBE TO CHAIN';
+      }, 4000);
+
+      showHero(
+        rr('Status', 'On-chain — confirmed', 'ok') +
+        rr('TX', `<a class="ethlink" href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank">${txHash.slice(0,18)}…${txHash.slice(-6)} ↗</a>`) +
+        rr('Commit', commit, 'dim') +
+        rr('Hash', hash.slice(0, 20) + '…', 'dim'),
+        true
+      );
+    }
+  }
+
+  /* ── FETCH ── */
+  async function handleGet() {
+    const id = document.getElementById('recordId').value;
+    if (id === '') { setStatus('Enter a record ID', true); return; }
+    const res = await getRecord(id);
+    if (res) {
+      const [dh, ci, sn, ts] = res;
+      showSec('getResult',
+        srr('ID', '#' + id) +
+        srr('Hash', dh.slice(0, 16) + '…') +
+        srr('Commit', ci) +
+        srr('Sender', sAddr(sn)) +
+        srr('Time', fmtTs(ts))
+      );
+    } else {
+      showSec('getResult', `<span class="r-val err">No record found</span>`);
+    }
+  }
+
+  /* ── SEARCH ── */
+  async function handleSearch() {
+    const commit = document.getElementById('searchCommit').value.trim();
+    if (!commit) { setStatus('Enter a commit ID', true); return; }
+    const res = await findByCommit(commit);
+    if (res) {
+      showSec('searchResult',
+        srr('Record', '#' + res.id?.toString()) +
+        srr('Hash', res.dataHash ? res.dataHash.slice(0, 16) + '…' : '—') +
+        srr('Sender', res.sender ? sAddr(res.sender) : '—') +
+        srr('Time', res.timestamp ? fmtTs(res.timestamp) : '—')
+      );
+    } else {
+      showSec('searchResult', `<span class="r-val err">Not found on-chain</span>`);
+    }
+  }
+</script>
+</body>
+</html>

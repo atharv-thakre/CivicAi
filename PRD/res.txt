@@ -1,0 +1,54 @@
+[
+  {
+    "ref": 1001,
+    "user_id": 45,
+    "title": "Pothole issue near MP Nagar",
+    "category": "Road Maintenance",
+    "ai_department": "Municipal Corporation",
+    "ai_confidence": 0.94,
+    "ai_severity": "High",
+    "ai_tags": [
+      "road",
+      "pothole",
+      "public safety"
+    ],
+    "is_urgent": true,
+    "status": "open",
+    "assigned_to": "Officer_101",
+    "lat": 23.2599,
+    "lng": 77.4126,
+    "address": "MP Nagar Zone 1, Bhopal",
+    "pincode": "462011",
+    "internal_priority": 8.7,
+    "upvotes": 34,
+    "created_at": "2026-05-09 14:30:33.759993",
+    "previous_hash": "GENESIS_BLOCK",
+    "current_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107"
+  },
+  {
+    "ref": 1002,
+    "user_id": 76,
+    "title": "Pothole issue near MP Nagar",
+    "category": "Road Maintenance",
+    "ai_department": "Municipal Corporation",
+    "ai_confidence": 0.94,
+    "ai_severity": "High",
+    "ai_tags": [
+      "road",
+      "pothole",
+      "public safety"
+    ],
+    "is_urgent": true,
+    "status": "open",
+    "assigned_to": "Officer_101",
+    "lat": 23.2599,
+    "lng": 77.4126,
+    "address": "MP Nagar Zone 1, Bhopal",
+    "pincode": "462011",
+    "internal_priority": 8.7,
+    "upvotes": 34,
+    "created_at": "2026-05-09 14:32:00.180422",
+    "previous_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107",
+    "current_hash": "35b2f261bf7aa168673143ae4d8320e295746db7f746ad4994ff2ccb1efae63c"
+  }
+]

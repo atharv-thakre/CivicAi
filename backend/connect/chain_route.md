@@ -67,86 +67,68 @@ Success response: records associated with the commit.
 
 The exact shape depends on the stored records. On success, returns the record objects.
 
-Possible error responses:
+Example response:
 
 ```json
 [
-    {
-        "ref": 1001,
-        "user_id": 45,
-        "title": "Pothole issue near MP Nagar",
-        "category": "Road Maintenance",
-        "ai_department": "Municipal Corporation",
-        "ai_confidence": 0.94,
-        "ai_severity": "High",
-        "ai_tags": [
-            "road",
-            "pothole",
-            "public safety"
-        ],
-        "is_urgent": true,
-        "status": "open",
-        "assigned_to": "Officer_101",
-        "lat": 23.2599,
-        "lng": 77.4126,
-        "address": "MP Nagar Zone 1, Bhopal",
-        "pincode": "462011",
-        "internal_priority": 8.7,
-        "upvotes": 34,
-        "created_at": "2026-05-09 14:30:33.759993",
-        "previous_hash": "GENESIS_BLOCK",
-        "current_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107"
-    },
-    {
-        "ref": 1002,
-        "user_id": 76,
-        "title": "Pothole issue near MP Nagar",
-        "category": "Road Maintenance",
-        "ai_department": "Municipal Corporation",
-        "ai_confidence": 0.94,
-        "ai_severity": "High",
-        "ai_tags": [
-            "road",
-            "pothole",
-            "public safety"
-        ],
-        "is_urgent": true,
-        "status": "open",
-        "assigned_to": "Officer_101",
-        "lat": 23.2599,
-        "lng": 77.4126,
-        "address": "MP Nagar Zone 1, Bhopal",
-        "pincode": "462011",
-        "internal_priority": 8.7,
-        "upvotes": 34,
-        "created_at": "2026-05-09 14:32:00.180422",
-        "previous_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107",
-        "current_hash": "35b2f261bf7aa168673143ae4d8320e295746db7f746ad4994ff2ccb1efae63c"
-    },
-    {
-        "ref": 2,
-        "user_id": 1,
-        "title": "broken wires posing a threat to locals",
-        "category": "electricity",
-        "ai_department": null,
-        "ai_confidence": null,
-        "ai_severity": null,
-        "ai_tags": [],
-        "is_urgent": false,
-        "status": "draft",
-        "assigned_to": null,
-        "lat": 22.757,
-        "lng": 75.8653,
-        "address": "J-180 Harshwardhan Nagar",
-        "pincode": "462003",
-        "internal_priority": 0.0,
-        "upvotes": 0,
-        "created_at": "2026-05-11 16:51:42.274961",
-        "previous_hash": "c78db55f6e22a15d34cb2f70ab0e399a14068bd93d8cfd756dd38db8aab2d39b",
-        "current_hash": "72e4a03b779c26925c00deb15ce37464d8524865a83eaaf14801c52dc28f5c1b"
-    }
+  {
+    "ref": 1001,
+    "user_id": 45,
+    "title": "Pothole issue near MP Nagar",
+    "category": "Road Maintenance",
+    "ai_department": "Municipal Corporation",
+    "ai_confidence": 0.94,
+    "ai_severity": "High",
+    "ai_tags": [
+      "road",
+      "pothole",
+      "public safety"
+    ],
+    "is_urgent": true,
+    "status": "open",
+    "assigned_to": "Officer_101",
+    "lat": 23.2599,
+    "lng": 77.4126,
+    "address": "MP Nagar Zone 1, Bhopal",
+    "pincode": "462011",
+    "internal_priority": 8.7,
+    "upvotes": 34,
+    "created_at": "2026-05-09 14:30:33.759993",
+    "previous_hash": "GENESIS_BLOCK",
+    "current_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107"
+  },
+  {
+    "ref": 1002,
+    "user_id": 76,
+    "title": "Pothole issue near MP Nagar",
+    "category": "Road Maintenance",
+    "ai_department": "Municipal Corporation",
+    "ai_confidence": 0.94,
+    "ai_severity": "High",
+    "ai_tags": [
+      "road",
+      "pothole",
+      "public safety"
+    ],
+    "is_urgent": true,
+    "status": "open",
+    "assigned_to": "Officer_101",
+    "lat": 23.2599,
+    "lng": 77.4126,
+    "address": "MP Nagar Zone 1, Bhopal",
+    "pincode": "462011",
+    "internal_priority": 8.7,
+    "upvotes": 34,
+    "created_at": "2026-05-09 14:32:00.180422",
+    "previous_hash": "737482c6397eca93909bae97319b0f99f5d6627efb97ba0723d49540a0297107",
+    "current_hash": "35b2f261bf7aa168673143ae4d8320e295746db7f746ad4994ff2ccb1efae63c"
+  }
 ]
 ```
+
+Possible error responses:
+
+- `{"error": "Records not found"}` when no records exist for the commit SHA.
 
 ## `GET /chain/diff/{commit_sha}`
 

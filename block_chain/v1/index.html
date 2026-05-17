@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AuditChain — On-Chain Registry</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --void: #030507;
+      --void2: #070b11;
+      --void3: #0b1018;
+      --violet: #7c3aed;
+      --violet-bright: #a855f7;
+      --violet-neon: #c084fc;
+      --violet-glow: rgba(168,85,247,0.18);
+      --violet-trace: rgba(168,85,247,0.55);
+      --magenta: #e879f9;
+      --magenta-glow: rgba(232,121,249,0.12);
+      --green-neon: #4ade80;
+      --green-glow: rgba(74,222,128,0.18);
+      --red-neon: #f43f5e;
+      --amber-neon: #fb923c;
+      --text: #e2d9f3;
+      --text-muted: #6b5f8a;
+      --text-dim: #251e38;
+      --border: rgba(124,58,237,0.18);
+      --border-hot: rgba(168,85,247,0.45);
+      --orb: 'Orbitron', sans-serif;
+      --mono: 'IBM Plex Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--mono);
+      background: var(--void);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      cursor: crosshair;
+    }
+
+    #bgCanvas {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    }
+
+    .hex-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='104' viewBox='0 0 60 104'%3E%3Cpolygon points='30,2 58,18 58,50 30,66 2,50 2,18' fill='none' stroke='%237c3aed' stroke-width='0.35' opacity='0.15'/%3E%3Cpolygon points='30,54 58,70 58,102 30,118 2,102 2,70' fill='none' stroke='%237c3aed' stroke-width='0.35' opacity='0.15'/%3E%3C/svg%3E");
+      background-size: 60px 104px;
+      animation: hexDrift 28s linear infinite;
+    }
+
+    @keyframes hexDrift {
+      from { background-position: 0 0; }
+      to { background-position: 60px 104px; }
+    }
+
+    /* ── PAGE STRUCTURE ── */
+    .page {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+
+    /* ── NAV ── */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 40px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(3,5,7,0.75);
+      backdrop-filter: blur(14px);
+      position: sticky; top: 0; z-index: 100;
+    }
+
+    .logo-wrap { display: flex; align-items: center; gap: 13px; }
+
+    .logo-hex { width: 34px; height: 34px; }
+    .logo-hex svg { width: 100%; height: 100%; filter: drop-shadow(0 0 10px rgba(192,132,252,0.7)); }
+
+    .logo-text {
+      font-family: var(--orb);
+      font-size: 13px; font-weight: 700; letter-spacing: 0.18em;
+      color: var(--violet-neon);
+      text-shadow: 0 0 18px var(--violet-neon), 0 0 36px rgba(192,132,252,0.25);
+      animation: glitch 9s infinite;
+    }
+
+    @keyframes glitch {
+      0%,93%,100% { text-shadow: 0 0 18px var(--violet-neon), 0 0 36px rgba(192,132,252,0.25); clip-path: none; }
+      94% { text-shadow: -2px 0 var(--magenta), 2px 0 var(--green-neon); transform: skewX(-1.5deg); }
+      95% { text-shadow: 2px 0 var(--magenta), -2px 0 var(--green-neon); transform: skewX(1.5deg); }
+      96% { text-shadow: 0 0 18px var(--violet-neon); transform: none; }
+    }
+
+    .logo-sub { font-size: 8px; letter-spacing: 0.28em; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
+
+    .nav-right { display: flex; align-items: center; gap: 18px; }
+
+    .chain-pill {
+      font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase;
+      padding: 5px 12px; border-radius: 3px;
+      border: 1px solid rgba(74,222,128,0.3);
+      color: var(--green-neon); background: rgba(74,222,128,0.05);
+      display: flex; align-items: center; gap: 7px;
+    }
+
+    .chain-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--green-neon); box-shadow: 0 0 7px var(--green-neon);
+      animation: breathe 2s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    /* ── CONNECT BTN ── */
+    .connect-btn {
+      font-family: var(--orb); font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em;
+      padding: 10px 22px; border-radius: 4px; cursor: crosshair;
+      background: transparent; border: 1px solid var(--violet-bright); color: var(--violet-bright);
+      position: relative; overflow: hidden; transition: color 0.3s;
+    }
+    .connect-btn::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--violet), var(--magenta));
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .connect-btn:hover::before { opacity: 1; }
+    .connect-btn:hover { color: #fff; box-shadow: 0 0 28px var(--violet-glow), 0 0 50px rgba(124,58,237,0.12); }
+    .connect-btn span { position: relative; z-index: 1; }
+    .connect-btn.connected { border-color: var(--green-neon); color: var(--green-neon); }
+    .connect-btn.connected::before { background: linear-gradient(135deg, #15803d, var(--green-neon)); }
+    .connect-btn.connected:hover { color: #fff; }
+
+    /* ── MAIN GRID ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 1.5px;
+      padding: 1.5px;
+      background: var(--border);
+    }
+
+    /* ── HERO PANEL ── */
+    .panel-hero {
+      grid-row: 1 / 3;
+      background: var(--void2);
+      padding: 56px 52px 48px;
+      display: flex; flex-direction: column;
+      position: relative; overflow: hidden;
+    }
+
+    /* animated top border trace */
+    .panel-hero::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--violet) 20%, var(--magenta) 50%, var(--violet) 80%, transparent 100%);
+      background-size: 200% 100%;
+      animation: borderTrace 2.5s linear infinite;
+    }
+
+    @keyframes borderTrace {
+      from { background-position: 100% 0; }
+      to { background-position: -100% 0; }
+    }
+
+    /* scan line */
+    .scan {
+      position: absolute; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(168,85,247,0.35), transparent);
+      animation: scanDown 7s linear infinite; pointer-events: none;
+    }
+    @keyframes scanDown {
+      from { top: 0; opacity: 0.9; }
+      85% { opacity: 0.6; }
+      to { top: 100%; opacity: 0; }
+    }
+
+    /* corner brackets */
+    .bk { position: absolute; width: 14px; height: 14px; pointer-events: none; }
+    .bk-tl { top: 14px; left: 14px; border-top: 1.5px solid var(--violet-trace); border-left: 1.5px solid var(--violet-trace); }
+    .bk-br { bottom: 14px; right: 14px; border-bottom: 1.5px solid var(--violet-trace); border-right: 1.5px solid var(--violet-trace); }
+    .bk-tr { top: 14px; right: 14px; border-top: 1px solid rgba(124,58,237,0.2); border-right: 1px solid rgba(124,58,237,0.2); }
+    .bk-bl { bottom: 14px; left: 14px; border-bottom: 1px solid rgba(124,58,237,0.2); border-left: 1px solid rgba(124,58,237,0.2); }
+
+    .sys-tag {
+      position: absolute; font-family: var(--orb); font-size: 8px;
+      letter-spacing: 0.2em; color: var(--text-dim);
+    }
+    .sys-tl { top: 18px; left: 30px; }
+    .sys-br { bottom: 18px; right: 30px; }
+
+    /* ── SECONDARY PANEL ── */
+    .panel-secondary {
+      background: var(--void2); padding: 34px 38px;
+      position: relative; overflow: hidden;
+    }
+
+    /* ── TYPOGRAPHY ── */
+    .eyebrow {
+      font-family: var(--orb); font-size: 8.5px; font-weight: 400;
+      letter-spacing: 0.35em; text-transform: uppercase;
+      color: var(--magenta); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .eyebrow::before {
+      content: ''; display: block; width: 18px; height: 1px;
+      background: var(--magenta); box-shadow: 0 0 8px var(--magenta);
+    }
+
+    .hero-title {
+      font-family: var(--orb); font-size: 38px; font-weight: 900;
+      line-height: 1.0; letter-spacing: -0.01em; margin-bottom: 8px; color: #fff;
+    }
+    .hero-title .grad {
+      background: linear-gradient(100deg, var(--violet-neon) 0%, var(--magenta) 60%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .hero-desc {
+      font-size: 11px; color: var(--text-muted); line-height: 1.75;
+      margin-bottom: 44px; max-width: 370px;
+    }
+
+    .panel-title {
+      font-family: var(--orb); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.08em; color: var(--violet-neon); margin-bottom: 20px;
+    }
+
+    /* ── FIELDS ── */
+    .field { margin-bottom: 22px; }
+
+    .field-label {
+      font-size: 8.5px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 9px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .field-hint { font-size: 7.5px; color: var(--text-dim); letter-spacing: 0.12em; }
+
+    input[type=text], input[type=number] {
+      width: 100%; background: rgba(124,58,237,0.05);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 14px 18px; font-family: var(--mono); font-size: 11.5px;
+      font-weight: 300; color: var(--text); outline: none; letter-spacing: 0.02em;
+      transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+      appearance: none;
+    }
+    input::placeholder { color: var(--text-dim); font-size: 10.5px; }
+    input:focus {
+      border-color: var(--violet-bright); background: rgba(124,58,237,0.09);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.1), inset 0 0 24px rgba(124,58,237,0.04);
+    }
+
+    .sm-input { padding: 11px 14px; font-size: 11px; }
+
+    /* ── HERO BUTTON ── */
+    .btn-hero {
+      font-family: var(--orb); font-size: 11.5px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      padding: 18px 36px; border-radius: 6px; border: none;
+      cursor: crosshair; width: 100%; color: #fff;
+      background: linear-gradient(135deg, #5b21b6, var(--violet), #6d28d9);
+      background-size: 200% 100%;
+      transition: background-position 0.4s, box-shadow 0.3s, transform 0.12s;
+      box-shadow: 0 0 40px rgba(124,58,237,0.45), 0 4px 30px rgba(124,58,237,0.2);
+      position: relative; overflow: hidden; margin-top: 4px;
+    }
+    .btn-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(232,121,249,0.25), rgba(168,85,247,0.1));
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .btn-hero:hover { background-position: right center; }
+    .btn-hero:hover::before { opacity: 1; }
+    .btn-hero:hover { box-shadow: 0 0 70px rgba(124,58,237,0.55), 0 8px 50px rgba(232,121,249,0.2); transform: translateY(-1px); }
+    .btn-hero:active { transform: scale(0.99); }
+
+    .btn-inner { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn-hero.loading .btn-inner { opacity: 0.3; }
+    .btn-hero.loading::after {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.18);
+      border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.65s linear infinite; z-index: 2;
+    }
+    .btn-hero.success {
+      background: linear-gradient(135deg, #15803d, #16a34a);
+      box-shadow: 0 0 50px rgba(74,222,128,0.45);
+    }
+    .btn-hero.success::before { opacity: 0; }
+
+    @keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+    @keyframes flashPulse {
+      0% { box-shadow: 0 0 0 0 rgba(74,222,128,0.6); }
+      100% { box-shadow: 0 0 0 80px rgba(74,222,128,0); }
+    }
+    .flash-anim { animation: flashPulse 0.7s ease-out; }
+
+    /* ── SECONDARY BTN ── */
+    .btn-sm {
+      font-family: var(--orb); font-size: 9px; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 11px 20px; border-radius: 5px;
+      border: 1px solid var(--border-hot); background: transparent;
+      color: var(--violet-neon); cursor: crosshair; width: 100%; margin-top: 4px;
+      position: relative; overflow: hidden; transition: all 0.2s;
+    }
+    .btn-sm::before {
+      content: ''; position: absolute; inset: 0;
+      background: var(--violet-glow); opacity: 0; transition: opacity 0.2s;
+    }
+    .btn-sm:hover::before { opacity: 1; }
+    .btn-sm:hover { box-shadow: 0 0 22px var(--violet-glow); }
+    .btn-sm:active { transform: scale(0.99); }
+
+    /* ── RESULT CARD ── */
+    .result-card {
+      margin-top: 18px; background: rgba(124,58,237,0.05);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px 18px; display: none;
+    }
+    .result-card.show { display: block; animation: revealUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+    .result-card.err { border-color: rgba(244,63,94,0.3); background: rgba(244,63,94,0.04); }
+    .result-card.ok { border-color: rgba(74,222,128,0.22); }
+
+    @keyframes revealUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .rrow { display: flex; gap: 12px; padding: 4px 0; border-bottom: 1px solid rgba(124,58,237,0.08); align-items: flex-start; }
+    .rrow:last-child { border-bottom: none; padding-bottom: 0; }
+    .rkey { font-size: 8.5px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); min-width: 68px; padding-top: 1px; flex-shrink: 0; }
+    .rval { font-size: 11px; color: var(--text); word-break: break-all; flex: 1; }
+    .rval.v { color: var(--violet-neon); }
+    .rval.g { color: var(--green-neon); }
+    .rval.e { color: var(--red-neon); }
+
+    .ethlink {
+      color: var(--violet-neon); text-decoration: none; font-size: 11px;
+      border-bottom: 1px dashed rgba(168,85,247,0.35); transition: color 0.2s;
+    }
+    .ethlink:hover { color: var(--magenta); }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      position: relative; z-index: 1;
+      background: rgba(3,5,7,0.9); border-top: 1px solid var(--border);
+      padding: 9px 40px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 9.5px; letter-spacing: 0.06em;
+    }
+    .s-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-dim); flex-shrink: 0; transition: all 0.3s;
+    }
+    .status-bar.ok .s-dot { background: var(--green-neon); box-shadow: 0 0 8px var(--green-neon); animation: breathe 2s infinite; }
+    .status-bar.err .s-dot { background: var(--red-neon); box-shadow: 0 0 8px var(--red-neon); }
+    .status-bar.pending .s-dot { background: var(--amber-neon); box-shadow: 0 0 8px var(--amber-neon); animation: breathe 0.55s infinite; }
+
+    #statusText { color: var(--text-muted); flex: 1; }
+    .status-bar.ok #statusText { color: var(--green-neon); }
+    .status-bar.err #statusText { color: var(--red-neon); }
+    .status-bar.pending #statusText { color: var(--amber-neon); }
+
+    .s-contract { font-size: 8px; color: var(--text-dim); letter-spacing: 0.1em; margin-left: auto; }
+    .s-block { font-family: var(--orb); font-size: 8px; color: var(--text-dim); letter-spacing: 0.12em; }
+
+    /* ── FADE-IN STAGGER ── */
+    .fi { animation: fadeInUp 0.7s cubic-bezier(0.16,1,0.3,1) both; }
+    nav.fi { animation-delay: 0s; }
+    .panel-hero.fi { animation-delay: 0.1s; }
+    .panel-secondary.fi:nth-of-type(2) { animation-delay: 0.18s; }
+    .panel-secondary.fi:nth-of-type(3) { animation-delay: 0.26s; }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 820px) {
+      main { grid-template-columns: 1fr; }
+      .panel-hero { grid-row: auto; padding: 38px 28px; }
+      .hero-title { font-size: 26px; }
+      nav { padding: 14px 20px; }
+      .status-bar { padding: 9px 20px; }
+      .s-contract, .s-block { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+<canvas id="bgCanvas"></canvas>
+<div class="hex-grid"></div>
+
+<div class="page">
+
+  <!-- NAV -->
+  <nav class="fi">
+    <div class="logo-wrap">
+      <div class="logo-hex">
+        <svg viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="17,2 31,9.5 31,24.5 17,32 3,24.5 3,9.5" fill="rgba(124,58,237,0.1)" stroke="#a855f7" stroke-width="1"/>
+          <path d="M10 13h14M10 17h9M10 21h12" stroke="#c084fc" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-text">AUDITCHAIN</div>
+        <div class="logo-sub">Immutable Record Protocol</div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="chain-pill"><span class="chain-dot"></span>Sepolia</div>
+      <button class="connect-btn" id="connectBtn" onclick="handleConnect()">
+        <span>◈ &nbsp;Connect Wallet</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- CONTENT GRID -->
+  <main>
+
+    <!-- HERO: STORE RECORD -->
+    <div class="panel-hero fi">
+      <div class="scan"></div>
+      <div class="bk bk-tl"></div><div class="bk bk-br"></div>
+      <div class="bk bk-tr"></div><div class="bk bk-bl"></div>
+      <div class="sys-tag sys-tl">SYS::WRITE_RECORD</div>
+
+      <div class="eyebrow">Commit to Blockchain</div>
+      <h1 class="hero-title">Store<br><span class="grad">On-Chain Record</span></h1>
+      <p class="hero-desc">
+        Permanently anchor a cryptographic data hash and commit ID to the Sepolia network.
+        Tamper-proof. Timestamped. Immutable.
+      </p>
+
+      <div class="field">
+        <div class="field-label">
+          Data Hash
+          <span class="field-hint">bytes32 · must start with 0x</span>
+        </div>
+        <input id="data" type="text"
+          placeholder="0x0000000000000000000000000000000000000000000000000000000000000000"
+          autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="field">
+        <div class="field-label">
+          Commit ID
+          <span class="field-hint">string · any format</span>
+        </div>
+        <input id="commit" type="text"
+          placeholder="e.g. a3f9c81d or v2.4.1-release"
+          autocomplete="off" spellcheck="false" />
+      </div>
+
+      <button class="btn-hero" id="storeBtn" onclick="handleStore()">
+        <div class="btn-inner">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1v9M5 7l3 3 3-3M2 14h12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Inscribe to Blockchain
+        </div>
+      </button>
+
+      <div class="result-card" id="storeResult"></div>
+      <div class="sys-tag sys-br" id="blockNum">BLK::—</div>
+    </div>
+
+    <!-- FETCH BY ID -->
+    <div class="panel-secondary fi">
+      <div class="bk bk-tl"></div>
+      <div class="sys-tag sys-tl">SYS::READ</div>
+
+      <div class="eyebrow" style="margin-bottom:8px;">Query</div>
+      <div class="panel-title">Fetch by Record ID</div>
+
+      <div class="field">
+        <div class="field-label">Record ID</div>
+        <input class="sm-input" id="recordId" type="number" placeholder="0" min="0" />
+      </div>
+      <button class="btn-sm" onclick="handleGet()">⬡ &nbsp;Fetch Record</button>
+      <div class="result-card" id="getResult"></div>
+    </div>
+
+    <!-- SEARCH BY COMMIT -->
+    <div class="panel-secondary fi">
+      <div class="sys-tag sys-tl">SYS::FIND</div>
+
+      <div class="eyebrow" style="margin-bottom:8px;">Search</div>
+      <div class="panel-title">Find by Commit ID</div>
+
+      <div class="field">
+        <div class="field-label">Commit ID</div>
+        <input class="sm-input" id="searchCommit" type="text"
+          placeholder="Enter commit ID…" autocomplete="off" spellcheck="false" />
+      </div>
+      <button class="btn-sm" onclick="handleSearch()">◈ &nbsp;Search Chain</button>
+      <div class="result-card" id="searchResult"></div>
+    </div>
+
+  </main>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar" id="statusBar">
+    <div class="s-dot"></div>
+    <span id="statusText">Not connected — connect wallet to interact</span>
+    <span class="s-block" id="blkLabel">BLK::—</span>
+    <span class="s-contract">CONTRACT &nbsp;0xDA2F1f…77BD138 &nbsp;·&nbsp; Sepolia</span>
+  </div>
+
+</div>
+
+<script src="chain.js"></script>
+
+<script>
+/* ═══ PARTICLE CANVAS ═══ */
+(function () {
+  const cv = document.getElementById('bgCanvas');
+  const cx = cv.getContext('2d');
+  let W, H, pts;
+  function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  function init() {
+    pts = Array.from({ length: 52 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - .5) * .22, vy: (Math.random() - .5) * .22,
+      r: Math.random() * 1.3 + .3, a: Math.random() * .45 + .1
+    }));
+  }
+  function frame() {
+    cx.clearRect(0, 0, W, H);
+    const g = cx.createRadialGradient(W * .3, H * .2, 0, W * .3, H * .2, H * .9);
+    g.addColorStop(0, 'rgba(124,58,237,.055)');
+    g.addColorStop(.55, 'rgba(232,121,249,.025)');
+    g.addColorStop(1, 'transparent');
+    cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+    pts.forEach((p, i) => {
+      pts.slice(i + 1).forEach(q => {
+        const dx = p.x - q.x, dy = p.y - q.y, d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 145) {
+          cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(q.x, q.y);
+          cx.strokeStyle = `rgba(124,58,237,${.11 * (1 - d / 145)})`;
+          cx.lineWidth = .5; cx.stroke();
+        }
+      });
+      cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      cx.fillStyle = `rgba(168,85,247,${p.a})`; cx.fill();
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+    });
+    requestAnimationFrame(frame);
+  }
+  resize(); init(); frame();
+  addEventListener('resize', () => { resize(); init(); });
+})();
+
+/* ═══ STATUS OVERRIDE ═══ */
+window.setStatus = function (msg, isError = false) {
+  const bar = document.getElementById('statusBar');
+  const txt = document.getElementById('statusText');
+  txt.textContent = msg;
+  if (isError) bar.className = 'status-bar err';
+  else if (/⏳|📤|Sending|TX Sent/.test(msg)) bar.className = 'status-bar pending';
+  else bar.className = 'status-bar ok';
+};
+
+/* ═══ BLOCK POLL ═══ */
+async function pollBlock() {
+  if (!window._ethProvider) return;
+  try {
+    const n = await window._ethProvider.getBlockNumber();
+    const s = n.toLocaleString();
+    document.getElementById('blockNum').textContent = 'BLK::' + s;
+    document.getElementById('blkLabel').textContent = 'BLK::' + s;
+  } catch {}
+}
+
+/* ═══ HELPERS ═══ */
+function rr(k, v, c = '') {
+  return `<div class="rrow"><span class="rkey">${k}</span><span class="rval ${c}">${v}</span></div>`;
+}
+function showR(id, html, type = 'ok') {
+  const el = document.getElementById(id);
+  el.className = 'result-card show ' + type;
+  el.innerHTML = html;
+}
+function sAddr(a) { return a.slice(0, 8) + '…' + a.slice(-6); }
+function fmtTs(ts) { return new Date(Number(ts) * 1000).toLocaleString(); }
+
+/* ═══ CONNECT ═══ */
+async function handleConnect() {
+  const btn = document.getElementById('connectBtn');
+  btn.innerHTML = '<span>◌ &nbsp;Connecting…</span>';
+  const acc = await connectWallet();
+  if (acc) {
+    btn.innerHTML = `<span>◈ &nbsp;${acc.slice(0, 6)}…${acc.slice(-4)}</span>`;
+    btn.classList.add('connected');
+    window._ethProvider = provider;
+    pollBlock(); setInterval(pollBlock, 12000);
+  } else {
+    btn.innerHTML = '<span>◈ &nbsp;Connect Wallet</span>';
+  }
+}
+
+/* ═══ STORE ═══ */
+async function handleStore() {
+  const btn = document.getElementById('storeBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+  const txHash = await storeRecord(
+    document.getElementById('data').value.trim(),
+    document.getElementById('commit').value.trim()
+  );
+  btn.classList.remove('loading'); btn.disabled = false;
+
+  if (txHash) {
+    btn.classList.add('success', 'flash-anim');
+    btn.querySelector('.btn-inner').innerHTML = '✓ &nbsp;Inscribed to Chain';
+    setTimeout(() => {
+      btn.classList.remove('success', 'flash-anim');
+      btn.querySelector('.btn-inner').innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v9M5 7l3 3 3-3M2 14h12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg> Inscribe to Blockchain`;
+    }, 3800);
+
+    const commit = document.getElementById('commit').value.trim();
+    const hash = document.getElementById('data').value.trim();
+    showR('storeResult',
+      rr('Status', '✓ Confirmed on-chain', 'g') +
+      rr('TX', `<a class="ethlink" href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank">${txHash.slice(0,16)}…${txHash.slice(-6)} ↗</a>`) +
+      rr('Commit', commit, 'v') +
+      rr('Hash', hash.slice(0, 18) + '…'),
+      'ok'
+    );
+  }
+}
+
+/* ═══ FETCH ═══ */
+async function handleGet() {
+  const id = document.getElementById('recordId').value;
+  if (id === '') { setStatus('❌ Enter a record ID', true); return; }
+  const res = await getRecord(id);
+  if (res) {
+    const [dh, ci, sn, ts] = res;
+    showR('getResult',
+      rr('ID', '#' + id, 'v') +
+      rr('Hash', dh.slice(0,16) + '…') +
+      rr('Commit', ci, 'v') +
+      rr('Sender', sAddr(sn)) +
+      rr('Time', fmtTs(ts)),
+      'ok'
+    );
+  } else {
+    showR('getResult', `<span class="rval e">No record found for ID ${id}</span>`, 'err');
+  }
+}
+
+/* ═══ SEARCH ═══ */
+async function handleSearch() {
+  const commit = document.getElementById('searchCommit').value.trim();
+  if (!commit) { setStatus('❌ Enter a commit ID', true); return; }
+  const res = await findByCommit(commit);
+  if (res) {
+    showR('searchResult',
+      rr('Record ID', '#' + res.id?.toString(), 'v') +
+      rr('Hash', res.dataHash ? res.dataHash.slice(0,16) + '…' : '—') +
+      rr('Sender', res.sender ? sAddr(res.sender) : '—') +
+      rr('Time', res.timestamp ? fmtTs(res.timestamp) : '—'),
+      'ok'
+    );
+  } else {
+    showR('searchResult', `<span class="rval e">Commit ID not found on-chain</span>`, 'err');
+  }
+}
+</script>
+</body>
+</html>
